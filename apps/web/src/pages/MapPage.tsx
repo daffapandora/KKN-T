@@ -184,7 +184,7 @@ export const MapPage: React.FC = () => {
   ];
 
   // Helper to get basemap style
-  const getBasemapStyle = (type: 'streets' | 'satellite') => {
+  const getBasemapStyle = (type: 'streets' | 'satellite'): maplibregl.StyleSpecification => {
     if (type === 'satellite') {
       // If Mapbox token is provided, use Mapbox Satellite raster tiles; otherwise use high-res Esri World Imagery (free, no token required)
       const satelliteTiles = mapboxToken
@@ -196,10 +196,10 @@ export const MapPage: React.FC = () => {
           ];
 
       return {
-        version: 8 as const,
+        version: 8,
         sources: {
           'satellite-tiles': {
-            type: 'raster' as const,
+            type: 'raster',
             tiles: satelliteTiles,
             tileSize: 256,
             attribution: mapboxToken
@@ -211,21 +211,21 @@ export const MapPage: React.FC = () => {
         layers: [
           {
             id: 'satellite-layer',
-            type: 'raster' as const,
+            type: 'raster',
             source: 'satellite-tiles',
             minzoom: 0,
             maxzoom: 19,
           },
         ],
-      };
+      } as maplibregl.StyleSpecification;
     }
 
     // Streets style using OpenStreetMap tiles
     return {
-      version: 8 as const,
+      version: 8,
       sources: {
         'osm-tiles': {
-          type: 'raster' as const,
+          type: 'raster',
           tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
           tileSize: 256,
           attribution: '© OpenStreetMap contributors',
@@ -235,13 +235,13 @@ export const MapPage: React.FC = () => {
       layers: [
         {
           id: 'osm-layer',
-          type: 'raster' as const,
+          type: 'raster',
           source: 'osm-tiles',
           minzoom: 0,
           maxzoom: 19,
         },
       ],
-    };
+    } as maplibregl.StyleSpecification;
   };
 
   useEffect(() => {

@@ -14,12 +14,37 @@ const ConfigSchema = z.object({
   POSTGRES_DB: z.string().default('kemitir_gis'),
   POSTGRES_USER: z.string().default('kemitir_user'),
   POSTGRES_PASSWORD: z.string().default('kemitir_secure_password_dev_2026'),
-  JWT_SECRET: z.string().default('super_secret_jwt_dev_key_at_least_32_characters_long_kemitir_2026'),
-  CORS_ORIGIN: z.string().default('*'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').default('super_secret_jwt_dev_key_at_least_32_characters_long_kemitir_2026'),
+  COOKIE_SECRET: z.string().min(32).default('cookie_secret_dev_key_kemitir_32_characters_long'),
+  PHONE_PEPPER: z.string().default('kemitir_phone_pepper_salt_2026_sumowono'),
+  CORS_ORIGIN: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
-});
+  TURNSTILE_ENABLED: z.coerce.boolean().default(false),
+  APP_VERSION: z.string().default('1.0.0'),
+}).refine(
+  (data) => {
+    if (data.NODE_ENV === 'production') {
+      const origins = data.CORS_ORIGIN.split(',').map((o) => o.trim());
+      if (origins.includes('*') || origins.length === 0 || origins[0] === '') {
+        return false;
+      }
+    }
+    return true;
+  },
+  {
+    message: 'CORS_ORIGIN cannot be wildcard "*" or empty in production mode',
+    path: ['CORS_ORIGIN'],
+  }
+);
 
 export const config = ConfigSchema.parse(process.env);
+
+export function getAllowedCorsOrigins(): string[] | boolean {
+  if (config.CORS_ORIGIN === '*') {
+    return true;
+  }
+  return config.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+}
 
 export function getDatabaseConnectionString(): string {
   if (config.DATABASE_URL) return config.DATABASE_URL;

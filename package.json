@@ -10,7 +10,7 @@
     "dev:web": "pnpm --filter @kemitir/web run dev",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
-    "lint": "pnpm -r run lint",
+    "lint": "pnpm -r run typecheck",
     "typecheck": "pnpm -r run typecheck",
     "db:migrate": "pnpm --filter @kemitir/db run migrate",
     "db:seed": "pnpm --filter @kemitir/db run seed"

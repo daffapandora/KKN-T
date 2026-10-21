@@ -1,22 +1,28 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { checkDatabaseConnection } from '../../plugins/db';
+import { config } from '../../config';
 
 export async function healthRoutes(fastify: FastifyInstance) {
-  fastify.get('/health', async (_request, reply) => {
+  const handler = async (request: FastifyRequest, reply: FastifyReply) => {
     const dbStatus = await checkDatabaseConnection();
     const isHealthy = dbStatus.ok;
 
+    if (!isHealthy) {
+      request.log.error({ dbError: dbStatus.error }, 'Health check: database connection degraded');
+    }
+
     const responsePayload = {
-      status: isHealthy ? 'healthy' : 'degraded',
+      status: isHealthy ? 'ok' : 'degraded',
+      db: isHealthy,
+      version: config.APP_VERSION,
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
-      database: {
-        connected: dbStatus.ok,
-        latencyMs: dbStatus.latencyMs,
-        ...(dbStatus.error ? { error: dbStatus.error } : {}),
-      },
     };
 
     return reply.status(isHealthy ? 200 : 503).send(responsePayload);
-  });
+  };
+
+  // Support both /health and /api/v1/health
+  fastify.get('/health', handler);
+  fastify.get('/api/v1/health', handler);
 }
