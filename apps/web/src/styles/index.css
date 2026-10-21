@@ -1,0 +1,22 @@
+@import '../../../../packages/ui/src/styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: #E8EAED;
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #151A22;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+}
+
+/* Hairline rule utility */
+.border-hairline {
+  border-color: #E8EAED;
+}

@@ -1,0 +1,22 @@
+{
+  "name": "kemitir-tangguh-bencana",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebGIS and Mobile PWA/Android for Drought Mitigation in Desa Kemitir, Sumowono",
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" run dev",
+    "dev:api": "pnpm --filter @kemitir/api run dev",
+    "dev:web": "pnpm --filter @kemitir/web run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "db:migrate": "pnpm --filter @kemitir/db run migrate",
+    "db:seed": "pnpm --filter @kemitir/db run seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,89 @@
+services:
+  # 1. PostgreSQL 16 + PostGIS 3.4
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: kemitir_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kemitir_gis}
+      POSTGRES_USER: ${POSTGRES_USER:-kemitir_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kemitir_secure_password_dev_2026}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Private, bound to localhost only (Section 10)
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kemitir_user} -d ${POSTGRES_DB:-kemitir_gis}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kemitir_net
+
+  # 2. Fastify REST API Service
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: kemitir_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      HOST: 0.0.0.0
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-kemitir_gis}
+      POSTGRES_USER: ${POSTGRES_USER:-kemitir_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kemitir_secure_password_dev_2026}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_dev_key_at_least_32_characters_long_kemitir_2026}
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - kemitir_net
+
+  # 3. Static WebGIS & PWA Frontend
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: kemitir_web
+    restart: unless-stopped
+    networks:
+      - kemitir_net
+
+  # 4. Nginx Reverse Proxy with TLS & Rate Limiting
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kemitir_nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - kemitir_net
+
+networks:
+  kemitir_net:
+    driver: bridge
+
+volumes:
+  postgis_data:
+    name: kemitir_postgis_data

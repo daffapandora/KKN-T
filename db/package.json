@@ -1,0 +1,19 @@
+{
+  "name": "@kemitir/db",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "migrate": "tsx migrate.ts",
+    "seed": "tsx seed.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
