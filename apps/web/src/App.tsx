@@ -6,6 +6,10 @@ import { Footer } from './components/layout/Footer';
 // Code-split routes for optimal performance budget (Section 8)
 const LandingPage = lazy(() => import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })));
 const MapPage = lazy(() => import('./pages/MapPage').then((m) => ({ default: m.MapPage })));
+const WaterSourcesPage = lazy(() => import('./pages/WaterSourcesPage').then((m) => ({ default: m.WaterSourcesPage })));
+const PriorityPage = lazy(() => import('./pages/PriorityPage').then((m) => ({ default: m.PriorityPage })));
+const EducationPage = lazy(() => import('./pages/EducationPage').then((m) => ({ default: m.EducationPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const ReportPage = lazy(() => import('./pages/ReportPage').then((m) => ({ default: m.ReportPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })));
 
@@ -28,7 +32,10 @@ export const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/peta" element={<MapPage />} />
-              <Route path="/sumber-air" element={<MapPage />} />
+              <Route path="/sumber-air" element={<WaterSourcesPage />} />
+              <Route path="/prioritas" element={<PriorityPage />} />
+              <Route path="/edukasi" element={<EducationPage />} />
+              <Route path="/dasbor" element={<DashboardPage />} />
               <Route path="/laporan" element={<ReportPage />} />
               <Route path="/privasi" element={<PrivacyPolicyPage />} />
               <Route path="*" element={<LandingPage />} />

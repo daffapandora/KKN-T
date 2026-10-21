@@ -20,7 +20,15 @@ import {
   Info,
   Maximize2,
   Check,
+  Compass,
 } from 'lucide-react';
+
+// Import Authentic GeoJSON Datasets
+import boundariesData from '../data/geojson/boundaries.json';
+import hazardData from '../data/geojson/hazard.json';
+import riskData from '../data/geojson/risk.json';
+import participatoryData from '../data/geojson/participatory.json';
+import priorityData from '../data/geojson/priority.json';
 
 interface LayerState {
   id: string;
@@ -39,6 +47,7 @@ export const MapPage: React.FC = () => {
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
 
   // Basemap state: Streets vs Satellite (Mapbox / Esri high-res satellite)
   const [basemap, setBasemap] = useState<'streets' | 'satellite'>('satellite');
@@ -62,7 +71,7 @@ export const MapPage: React.FC = () => {
       slug: 'risiko-kekeringan',
       title: 'Peta Risiko Kekeringan (Risk)',
       category: 'risk',
-      active: activeModeParam.includes('risiko'),
+      active: activeModeParam.includes('risiko') || activeModeParam === 'risk',
       opacity: 0.65,
       color: '#DC2626',
       description: 'Matriks bahaya dikalikan keterpaparan penduduk & lahan sawah.',
@@ -82,7 +91,7 @@ export const MapPage: React.FC = () => {
       slug: 'peta-partisipatif',
       title: 'Peta Partisipatif Warga',
       category: 'participatory',
-      active: activeModeParam.includes('partisipatif'),
+      active: activeModeParam.includes('partisipatif') || activeModeParam === 'participatory',
       opacity: 0.85,
       color: '#7C3AED',
       description: 'Jalur pipa swadaya, bak penampung warga, dan sawah kritis terverifikasi.',
@@ -99,25 +108,27 @@ export const MapPage: React.FC = () => {
     },
     {
       id: '6',
-      slug: 'prioritas-penanganan',
+      slug: 'prioritas',
       title: 'Prioritas Penanganan Bencana',
       category: 'priority',
-      active: activeModeParam.includes('prioritas'),
-      opacity: 0.75,
+      active: activeModeParam.includes('prioritas') || activeModeParam === 'priority',
+      opacity: 0.8,
       color: '#B91C1C',
-      description: 'Urutan intervensi bantuan tangki air dan perbaikan pipa desa.',
+      description: 'Zona tanggap darurat dropping air dan perbaikan pipa paralon.',
     },
   ]);
 
+  // Selected feature drawer state
   const [selectedFeature, setSelectedFeature] = useState<{
     title: string;
     type: string;
     status: string;
+    dusun: string;
     description: string;
-    dusun?: string;
     debit?: string;
     hazardClass?: string;
     coordinates?: [number, number];
+    extraAttributes?: Record<string, any>;
   } | null>({
     title: 'Tuk Mulyo (Mata Air Utama)',
     type: 'Mata Air Pegunungan',
@@ -132,8 +143,8 @@ export const MapPage: React.FC = () => {
   const [layerPanelOpen, setLayerPanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sample spatial feature pins
-  const sampleFeatures = [
+  // Sample water source pins
+  const waterSourcePins = [
     {
       id: 'ws-1',
       title: 'Tuk Mulyo (Mata Air Utama)',
@@ -171,22 +182,22 @@ export const MapPage: React.FC = () => {
       color: '#F59E0B',
     },
     {
-      id: 'pf-1',
-      title: 'Jalur Pipa Transmisi RT 02',
-      type: 'Peta Partisipatif Warga',
-      status: 'Tervalidasi RT',
-      dusun: 'Dusun Kemitir Kidul',
-      description: 'Pipa paralon 2 inch sepanjang 350m yang melintasi tebing terjal rawan retak.',
+      id: 'ws-4',
+      title: 'Embung Pertanian Garon',
+      type: 'Embung Penampung Hujan',
+      status: 'Sedimentasi Tinggi',
+      dusun: 'Dusun Garon RT 01',
+      description: 'Embung irigasi seluas 800m2 untuk kelompok tani palawija sayur Garon.',
+      debit: 'Tampungan 4.000 m3',
       hazardClass: 'Tinggi',
-      coords: [110.316, -7.231] as [number, number],
-      color: '#7C3AED',
+      coords: [110.3265, -7.2265] as [number, number],
+      color: '#0284C7',
     },
   ];
 
   // Helper to get basemap style
   const getBasemapStyle = (type: 'streets' | 'satellite'): maplibregl.StyleSpecification => {
     if (type === 'satellite') {
-      // If Mapbox token is provided, use Mapbox Satellite raster tiles; otherwise use high-res Esri World Imagery (free, no token required)
       const satelliteTiles = mapboxToken
         ? [
             `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.webp?access_token=${mapboxToken}`,
@@ -220,7 +231,6 @@ export const MapPage: React.FC = () => {
       } as maplibregl.StyleSpecification;
     }
 
-    // Streets style using OpenStreetMap tiles
     return {
       version: 8,
       sources: {
@@ -244,6 +254,336 @@ export const MapPage: React.FC = () => {
     } as maplibregl.StyleSpecification;
   };
 
+  // Add all GeoJSON Vector Layers to MapLibre
+  const setupVectorLayers = (map: maplibregl.Map) => {
+    // 1. Boundaries Source & Layers
+    if (!map.getSource('src-boundaries')) {
+      map.addSource('src-boundaries', {
+        type: 'geojson',
+        data: boundariesData as any,
+      });
+
+      map.addLayer({
+        id: 'layer-batas-desa-fill',
+        type: 'fill',
+        source: 'src-boundaries',
+        paint: {
+          'fill-color': '#0F172A',
+          'fill-opacity': 0.05,
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-batas-desa-line',
+        type: 'line',
+        source: 'src-boundaries',
+        paint: {
+          'line-color': '#FFFFFF',
+          'line-width': 2.5,
+          'line-dasharray': [3, 2],
+        },
+      });
+
+      map.on('click', 'layer-batas-desa-fill', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const p = e.features[0].properties || {};
+        setSelectedFeature({
+          title: p.name || 'Batas Administrasi Dusun',
+          type: 'Batas Wilayah Administrasi',
+          status: 'Wilayah Desa Kemitir',
+          dusun: p.dusun || 'Desa Kemitir',
+          description: `Wilayah administrasi RW ${p.rw} dengan ${p.rt_count} RT, estimasi populasi ${p.population} jiwa, mencakup luasan ${p.area_ha} Ha.`,
+          hazardClass: 'Administrasi',
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        });
+      });
+    }
+
+    // 2. Hazard Source & Layers
+    if (!map.getSource('src-hazard')) {
+      map.addSource('src-hazard', {
+        type: 'geojson',
+        data: hazardData as any,
+      });
+
+      map.addLayer({
+        id: 'layer-bahaya-kekeringan-fill',
+        type: 'fill',
+        source: 'src-hazard',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.65,
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-bahaya-kekeringan-line',
+        type: 'line',
+        source: 'src-hazard',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2,
+        },
+      });
+
+      map.on('click', 'layer-bahaya-kekeringan-fill', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const p = e.features[0].properties || {};
+        setSelectedFeature({
+          title: `Zona Bahaya: Kelas ${p.hazard_class}`,
+          type: 'Peta Bahaya Kekeringan (Hazard)',
+          status: `Skor Bahaya ${p.score}`,
+          dusun: 'Kawasan Desa Kemitir',
+          description: p.description || 'Zona kerawanan kekeringan lereng Gunung Ungaran.',
+          hazardClass: p.hazard_class,
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        });
+      });
+    }
+
+    // 3. Risk Source & Layers
+    if (!map.getSource('src-risk')) {
+      map.addSource('src-risk', {
+        type: 'geojson',
+        data: riskData as any,
+      });
+
+      map.addLayer({
+        id: 'layer-risiko-kekeringan-fill',
+        type: 'fill',
+        source: 'src-risk',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.6,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-risiko-kekeringan-line',
+        type: 'line',
+        source: 'src-risk',
+        paint: {
+          'line-color': '#991B1B',
+          'line-width': 2.5,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      map.on('click', 'layer-risiko-kekeringan-fill', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const p = e.features[0].properties || {};
+        setSelectedFeature({
+          title: `Zona Risiko: ${p.risk_class}`,
+          type: 'Peta Risiko Kekeringan (Risk)',
+          status: `Komposit Risiko ${p.composite_risk}`,
+          dusun: 'Kemitir Kidul & Garon',
+          description: `${p.description} Mempengaruhi ${p.affected_kk} Kepala Keluarga.`,
+          hazardClass: p.risk_class,
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        });
+      });
+    }
+
+    // 4. Priority Intervention Source & Layers
+    if (!map.getSource('src-priority')) {
+      map.addSource('src-priority', {
+        type: 'geojson',
+        data: priorityData as any,
+      });
+
+      map.addLayer({
+        id: 'layer-prioritas-fill',
+        type: 'fill',
+        source: 'src-priority',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.55,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-prioritas-line',
+        type: 'line',
+        source: 'src-priority',
+        paint: {
+          'line-color': '#DC2626',
+          'line-width': 3.5,
+          'line-dasharray': [2, 1],
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      map.on('click', 'layer-prioritas-fill', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const p = e.features[0].properties || {};
+        setSelectedFeature({
+          title: p.name || 'Zona Intervensi Prioritas',
+          type: 'Prioritas Penanganan Bencana',
+          status: p.urgency || 'Sangat Mendesak',
+          dusun: 'Wilayah Terdampak Utama',
+          description: `Rencana tindakan darurat: ${p.action}. Melindungi ${p.affected_residents} warga terdampak.`,
+          hazardClass: 'Sangat Tinggi',
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        });
+      });
+    }
+
+    // 5. Participatory Source & Layers
+    if (!map.getSource('src-participatory')) {
+      map.addSource('src-participatory', {
+        type: 'geojson',
+        data: participatoryData as any,
+      });
+
+      map.addLayer({
+        id: 'layer-peta-partisipatif-area',
+        type: 'fill',
+        source: 'src-participatory',
+        filter: ['==', '$type', 'Polygon'],
+        paint: {
+          'fill-color': '#8B5CF6',
+          'fill-opacity': 0.45,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-peta-partisipatif-pipe',
+        type: 'line',
+        source: 'src-participatory',
+        filter: ['==', '$type', 'LineString'],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 4.5,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-peta-partisipatif-point',
+        type: 'circle',
+        source: 'src-participatory',
+        filter: ['==', '$type', 'Point'],
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#EC4899',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': '#FFFFFF',
+        },
+        layout: {
+          visibility: 'none',
+        },
+      });
+
+      const onPartClick = (e: any) => {
+        if (!e.features || !e.features[0]) return;
+        const p = e.features[0].properties || {};
+        setSelectedFeature({
+          title: p.name || 'Data Partisipatif Warga',
+          type: p.category || 'Peta Partisipatif',
+          status: p.condition || p.status || 'Tervalidasi Warga',
+          dusun: 'Dusun Kemitir Kidul',
+          description: p.description || 'Data partisipatif hasil pemetaan warga desa.',
+          hazardClass: 'Tinggi',
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        });
+      };
+
+      map.on('click', 'layer-peta-partisipatif-area', onPartClick);
+      map.on('click', 'layer-peta-partisipatif-pipe', onPartClick);
+      map.on('click', 'layer-peta-partisipatif-point', onPartClick);
+    }
+  };
+
+  // Synchronize Map Layers with React Layer State
+  const syncMapLayers = (map: maplibregl.Map, currentLayers: LayerState[]) => {
+    currentLayers.forEach((layer) => {
+      const isVisible = layer.active ? 'visible' : 'none';
+
+      // 1. Hazard Layer
+      if (layer.slug === 'bahaya-kekeringan') {
+        if (map.getLayer('layer-bahaya-kekeringan-fill')) {
+          map.setLayoutProperty('layer-bahaya-kekeringan-fill', 'visibility', isVisible);
+          map.setPaintProperty('layer-bahaya-kekeringan-fill', 'fill-opacity', layer.opacity);
+        }
+        if (map.getLayer('layer-bahaya-kekeringan-line')) {
+          map.setLayoutProperty('layer-bahaya-kekeringan-line', 'visibility', isVisible);
+        }
+      }
+
+      // 2. Risk Layer
+      if (layer.slug === 'risiko-kekeringan') {
+        if (map.getLayer('layer-risiko-kekeringan-fill')) {
+          map.setLayoutProperty('layer-risiko-kekeringan-fill', 'visibility', isVisible);
+          map.setPaintProperty('layer-risiko-kekeringan-fill', 'fill-opacity', layer.opacity);
+        }
+        if (map.getLayer('layer-risiko-kekeringan-line')) {
+          map.setLayoutProperty('layer-risiko-kekeringan-line', 'visibility', isVisible);
+        }
+      }
+
+      // 3. Boundaries Layer
+      if (layer.slug === 'batas-desa') {
+        if (map.getLayer('layer-batas-desa-fill')) {
+          map.setLayoutProperty('layer-batas-desa-fill', 'visibility', isVisible);
+        }
+        if (map.getLayer('layer-batas-desa-line')) {
+          map.setLayoutProperty('layer-batas-desa-line', 'visibility', isVisible);
+        }
+      }
+
+      // 4. Participatory Layer
+      if (layer.slug === 'peta-partisipatif') {
+        if (map.getLayer('layer-peta-partisipatif-area')) {
+          map.setLayoutProperty('layer-peta-partisipatif-area', 'visibility', isVisible);
+          map.setPaintProperty('layer-peta-partisipatif-area', 'fill-opacity', layer.opacity * 0.5);
+        }
+        if (map.getLayer('layer-peta-partisipatif-pipe')) {
+          map.setLayoutProperty('layer-peta-partisipatif-pipe', 'visibility', isVisible);
+        }
+        if (map.getLayer('layer-peta-partisipatif-point')) {
+          map.setLayoutProperty('layer-peta-partisipatif-point', 'visibility', isVisible);
+        }
+      }
+
+      // 5. Priority Layer
+      if (layer.slug === 'prioritas') {
+        if (map.getLayer('layer-prioritas-fill')) {
+          map.setLayoutProperty('layer-prioritas-fill', 'visibility', isVisible);
+          map.setPaintProperty('layer-prioritas-fill', 'fill-opacity', layer.opacity * 0.6);
+        }
+        if (map.getLayer('layer-prioritas-line')) {
+          map.setLayoutProperty('layer-prioritas-line', 'visibility', isVisible);
+        }
+      }
+
+      // 6. Water Sources Marker Pins
+      if (layer.slug === 'sumber-air') {
+        markersRef.current.forEach((marker) => {
+          const el = marker.getElement();
+          if (el) {
+            el.style.display = layer.active ? 'flex' : 'none';
+          }
+        });
+      }
+    });
+  };
+
+  // Map Initialization
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -258,17 +598,27 @@ export const MapPage: React.FC = () => {
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
       map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
 
-      // Add markers for sample features
-      sampleFeatures.forEach((feat) => {
+      map.on('load', () => {
+        setupVectorLayers(map);
+        syncMapLayers(map, layers);
+      });
+
+      // Clear existing markers
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+
+      // Add markers for water sources
+      waterSourcePins.forEach((feat) => {
         const el = document.createElement('div');
-        el.className = 'w-6 h-6 rounded-full border-2 border-white flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-125';
+        el.className = 'w-7 h-7 rounded-full border-2 border-white flex items-center justify-center cursor-pointer shadow-lg transition-transform hover:scale-125 z-10';
         el.style.backgroundColor = feat.color;
 
         const innerDot = document.createElement('div');
-        innerDot.className = 'w-2 h-2 rounded-full bg-white';
+        innerDot.className = 'w-2.5 h-2.5 rounded-full bg-white';
         el.appendChild(innerDot);
 
-        el.addEventListener('click', () => {
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
           setSelectedFeature({
             title: feat.title,
             type: feat.type,
@@ -279,12 +629,14 @@ export const MapPage: React.FC = () => {
             hazardClass: feat.hazardClass,
             coordinates: feat.coords,
           });
-          map.flyTo({ center: feat.coords, zoom: 15, duration: 800 });
+          map.flyTo({ center: feat.coords, zoom: 15.5, duration: 800 });
         });
 
-        new maplibregl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el })
           .setLngLat(feat.coords)
           .addTo(map);
+
+        markersRef.current.push(marker);
       });
 
       mapInstance.current = map;
@@ -293,35 +645,71 @@ export const MapPage: React.FC = () => {
         map.remove();
       };
     } catch (e) {
-      console.warn('MapLibre GL initialization fallback:', e);
+      console.warn('MapLibre GL initialization error:', e);
     }
   }, [basemap, mapboxToken]);
 
-  // Adjust active layers when mode changes from URL
+  // Sync Layers whenever `layers` state changes
   useEffect(() => {
-    if (activeModeParam === 'all') return;
+    if (!mapInstance.current || !mapInstance.current.isStyleLoaded()) return;
+    syncMapLayers(mapInstance.current, layers);
+  }, [layers]);
+
+  // Adjust active layers when thematic filter changes from URL or pill click
+  const setThematicFilter = (mode: string) => {
+    setSearchParams({ mode });
 
     setLayers((prev) =>
       prev.map((l) => {
-        if (activeModeParam === 'hazard' || activeModeParam === 'bahaya-kekeringan') {
-          return { ...l, active: l.category === 'hazard' || l.category === 'base' };
+        if (mode === 'all') {
+          return { ...l, active: true };
         }
-        if (activeModeParam === 'risk' || activeModeParam === 'risiko-kekeringan') {
-          return { ...l, active: l.category === 'risk' || l.category === 'base' };
+        if (mode === 'hazard' || mode === 'bahaya-kekeringan') {
+          return {
+            ...l,
+            active: l.category === 'hazard' || l.category === 'base',
+          };
         }
-        if (activeModeParam === 'water' || activeModeParam === 'sumber-air') {
-          return { ...l, active: l.category === 'water' || l.category === 'base' };
+        if (mode === 'risk' || mode === 'risiko-kekeringan') {
+          return {
+            ...l,
+            active: l.category === 'risk' || l.category === 'base',
+          };
         }
-        if (activeModeParam === 'participatory' || activeModeParam === 'peta-partisipatif') {
-          return { ...l, active: l.category === 'participatory' || l.category === 'base' };
+        if (mode === 'water' || mode === 'sumber-air') {
+          return {
+            ...l,
+            active: l.category === 'water' || l.category === 'base',
+          };
         }
-        if (activeModeParam === 'priority' || activeModeParam === 'prioritas') {
-          return { ...l, active: l.category === 'priority' || l.category === 'base' };
+        if (mode === 'participatory' || mode === 'peta-partisipatif') {
+          return {
+            ...l,
+            active: l.category === 'participatory' || l.category === 'base',
+          };
+        }
+        if (mode === 'priority' || mode === 'prioritas') {
+          return {
+            ...l,
+            active: l.category === 'priority' || l.category === 'base',
+          };
         }
         return l;
       })
     );
-  }, [activeModeParam]);
+
+    if (mapInstance.current) {
+      if (mode === 'hazard' || mode === 'bahaya-kekeringan') {
+        mapInstance.current.flyTo({ center: [110.3165, -7.2285], zoom: 14.2 });
+      } else if (mode === 'water' || mode === 'sumber-air') {
+        mapInstance.current.flyTo({ center: [110.3155, -7.2280], zoom: 14.8 });
+      } else if (mode === 'participatory') {
+        mapInstance.current.flyTo({ center: [110.3195, -7.2315], zoom: 15.0 });
+      } else if (mode === 'priority') {
+        mapInstance.current.flyTo({ center: [110.3175, -7.2325], zoom: 15.2 });
+      }
+    }
+  };
 
   const toggleLayer = (slug: string) => {
     setLayers((prev) =>
@@ -335,10 +723,6 @@ export const MapPage: React.FC = () => {
     );
   };
 
-  const setThematicFilter = (mode: string) => {
-    setSearchParams({ mode });
-  };
-
   const openInGoogleMaps = (lng: number, lat: number) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
   };
@@ -347,15 +731,15 @@ export const MapPage: React.FC = () => {
     <div className="relative w-full h-[calc(100vh-4rem)] flex flex-col md:flex-row overflow-hidden bg-slate-100">
       {/* 1. Dark App Shell Left Sidebar (Desktop) */}
       <aside className="w-16 bg-[#17202B] border-r border-[#232F3E] hidden md:flex flex-col items-center py-4 justify-between z-20 shrink-0">
-        <div className="space-y-5 flex flex-col items-center">
+        <div className="space-y-4 flex flex-col items-center">
           <div className="w-10 h-10 rounded-[6px] bg-[#16A34A] flex items-center justify-center text-white shadow-sm">
             <Layers className="w-5 h-5" />
           </div>
 
           <button
             onClick={() => setThematicFilter('all')}
-            className={`p-2.5 rounded-[6px] transition-colors ${
-              activeModeParam === 'all' ? 'bg-[#16A34A] text-white' : 'text-slate-400 hover:text-white'
+            className={`p-2.5 rounded-[6px] transition-all ${
+              activeModeParam === 'all' ? 'bg-[#16A34A] text-white shadow-md' : 'text-slate-400 hover:text-white'
             }`}
             title="Semua Layer"
           >
@@ -364,30 +748,48 @@ export const MapPage: React.FC = () => {
 
           <button
             onClick={() => setThematicFilter('hazard')}
-            className={`p-2.5 rounded-[6px] transition-colors ${
-              activeModeParam === 'hazard' ? 'bg-[#F97316] text-white' : 'text-slate-400 hover:text-white'
+            className={`p-2.5 rounded-[6px] transition-all ${
+              activeModeParam === 'hazard' || activeModeParam === 'bahaya-kekeringan'
+                ? 'bg-[#F97316] text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
-            title="Peta Bahaya"
+            title="Peta Bahaya Kekeringan"
           >
             <ShieldAlert className="w-4 h-4" />
           </button>
 
           <button
-            onClick={() => setThematicFilter('water')}
-            className={`p-2.5 rounded-[6px] transition-colors ${
-              activeModeParam === 'water' ? 'bg-[#2563EB] text-white' : 'text-slate-400 hover:text-white'
+            onClick={() => setThematicFilter('risk')}
+            className={`p-2.5 rounded-[6px] transition-all ${
+              activeModeParam === 'risk' || activeModeParam === 'risiko-kekeringan'
+                ? 'bg-[#DC2626] text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
-            title="Sumber Air"
+            title="Peta Risiko Kekeringan"
+          >
+            <Compass className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => setThematicFilter('water')}
+            className={`p-2.5 rounded-[6px] transition-all ${
+              activeModeParam === 'water' || activeModeParam === 'sumber-air'
+                ? 'bg-[#2563EB] text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Titik Sumber Air Bersih"
           >
             <Droplets className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => setThematicFilter('participatory')}
-            className={`p-2.5 rounded-[6px] transition-colors ${
-              activeModeParam === 'participatory' ? 'bg-[#7C3AED] text-white' : 'text-slate-400 hover:text-white'
+            className={`p-2.5 rounded-[6px] transition-all ${
+              activeModeParam === 'participatory' || activeModeParam === 'peta-partisipatif'
+                ? 'bg-[#7C3AED] text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
-            title="Peta Partisipatif"
+            title="Peta Partisipatif Warga"
           >
             <Activity className="w-4 h-4" />
           </button>
@@ -402,7 +804,7 @@ export const MapPage: React.FC = () => {
       <div className="absolute top-3 left-4 md:left-20 right-4 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left: Search Bar & Thematic Tabs */}
         <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
-          <div className="bg-white rounded-[6px] border border-[#E8EAED] px-3 py-1.5 flex items-center gap-2 shadow-sm w-64 md:w-80">
+          <div className="bg-white rounded-[6px] border border-[#E8EAED] px-3 py-1.5 flex items-center gap-2 shadow-sm w-60 md:w-72">
             <Search className="w-3.5 h-3.5 text-[#6F747C]" />
             <input
               type="text"
@@ -413,43 +815,51 @@ export const MapPage: React.FC = () => {
             />
           </div>
 
-          <div className="hidden lg:flex items-center bg-white rounded-[6px] border border-[#E8EAED] p-1 shadow-sm gap-1 text-xs font-medium">
+          <div className="flex items-center bg-white rounded-[6px] border border-[#E8EAED] p-1 shadow-sm gap-1 text-xs font-medium">
             <button
               onClick={() => setThematicFilter('all')}
-              className={`px-2.5 py-1 rounded-[4px] transition-colors ${
-                activeModeParam === 'all' ? 'bg-[#17202B] text-white' : 'text-[#6F747C] hover:text-[#151A22]'
+              className={`px-3 py-1 rounded-[4px] transition-colors ${
+                activeModeParam === 'all' ? 'bg-[#17202B] text-white shadow-xs' : 'text-[#6F747C] hover:text-[#151A22]'
               }`}
             >
               Semua
             </button>
             <button
               onClick={() => setThematicFilter('hazard')}
-              className={`px-2.5 py-1 rounded-[4px] transition-colors ${
-                activeModeParam === 'hazard' ? 'bg-[#F97316] text-white' : 'text-[#6F747C] hover:text-[#151A22]'
+              className={`px-3 py-1 rounded-[4px] transition-colors ${
+                activeModeParam === 'hazard' || activeModeParam === 'bahaya-kekeringan'
+                  ? 'bg-[#F97316] text-white shadow-xs font-semibold'
+                  : 'text-[#6F747C] hover:text-[#151A22]'
               }`}
             >
               Bahaya
             </button>
             <button
               onClick={() => setThematicFilter('risk')}
-              className={`px-2.5 py-1 rounded-[4px] transition-colors ${
-                activeModeParam === 'risk' ? 'bg-[#DC2626] text-white' : 'text-[#6F747C] hover:text-[#151A22]'
+              className={`px-3 py-1 rounded-[4px] transition-colors ${
+                activeModeParam === 'risk' || activeModeParam === 'risiko-kekeringan'
+                  ? 'bg-[#DC2626] text-white shadow-xs font-semibold'
+                  : 'text-[#6F747C] hover:text-[#151A22]'
               }`}
             >
               Risiko
             </button>
             <button
               onClick={() => setThematicFilter('water')}
-              className={`px-2.5 py-1 rounded-[4px] transition-colors ${
-                activeModeParam === 'water' ? 'bg-[#2563EB] text-white' : 'text-[#6F747C] hover:text-[#151A22]'
+              className={`px-3 py-1 rounded-[4px] transition-colors ${
+                activeModeParam === 'water' || activeModeParam === 'sumber-air'
+                  ? 'bg-[#2563EB] text-white shadow-xs font-semibold'
+                  : 'text-[#6F747C] hover:text-[#151A22]'
               }`}
             >
               Sumber Air
             </button>
             <button
               onClick={() => setThematicFilter('participatory')}
-              className={`px-2.5 py-1 rounded-[4px] transition-colors ${
-                activeModeParam === 'participatory' ? 'bg-[#7C3AED] text-white' : 'text-[#6F747C] hover:text-[#151A22]'
+              className={`px-3 py-1 rounded-[4px] transition-colors ${
+                activeModeParam === 'participatory' || activeModeParam === 'peta-partisipatif'
+                  ? 'bg-[#7C3AED] text-white shadow-xs font-semibold'
+                  : 'text-[#6F747C] hover:text-[#151A22]'
               }`}
             >
               Partisipatif
@@ -457,211 +867,232 @@ export const MapPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Basemap Selector (Streets vs Satellite) */}
-        <div className="pointer-events-auto flex items-center bg-white rounded-[6px] border border-[#E8EAED] p-1 shadow-sm gap-1 text-xs">
+        {/* Right: Basemap Switcher (Satellite vs Streets) */}
+        <div className="bg-white rounded-[6px] border border-[#E8EAED] p-1 flex items-center gap-1 shadow-sm pointer-events-auto">
           <button
             onClick={() => setBasemap('satellite')}
-            className={`px-3 py-1 rounded-[4px] font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 text-xs rounded-[4px] font-medium transition-colors ${
               basemap === 'satellite'
                 ? 'bg-[#16A34A] text-white'
                 : 'text-[#6F747C] hover:text-[#151A22]'
             }`}
           >
-            <span>Citra Satelit</span>
-            {basemap === 'satellite' && <Check className="w-3 h-3" />}
+            Citra Satelit {basemap === 'satellite' && '✓'}
           </button>
           <button
             onClick={() => setBasemap('streets')}
-            className={`px-3 py-1 rounded-[4px] font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 text-xs rounded-[4px] font-medium transition-colors ${
               basemap === 'streets'
-                ? 'bg-[#17202B] text-white'
+                ? 'bg-[#16A34A] text-white'
                 : 'text-[#6F747C] hover:text-[#151A22]'
             }`}
           >
-            <span>Peta Jalan (OSM)</span>
-            {basemap === 'streets' && <Check className="w-3 h-3" />}
+            Peta Jalan (OSM) {basemap === 'streets' && '✓'}
           </button>
         </div>
       </div>
 
-      {/* 3. Floating Layer Panel (White, 1px border, no heavy shadow) */}
+      {/* 3. Layer Manager Panel (Left Overlay) */}
       <div
-        className={`absolute top-16 left-4 md:left-20 w-80 bg-white/95 backdrop-blur-sm rounded-[8px] border border-[#E8EAED] p-4 shadow-sm z-10 transition-all ${
-          layerPanelOpen ? 'block' : 'hidden'
-        } max-h-[calc(100vh-8rem)] overflow-y-auto`}
+        className={`absolute top-16 left-4 md:left-20 z-10 w-80 bg-white/95 backdrop-blur-md rounded-[8px] border border-[#E8EAED] shadow-lg transition-all duration-300 max-h-[calc(100vh-8rem)] flex flex-col ${
+          layerPanelOpen ? 'translate-x-0 opacity-100' : '-translate-x-96 opacity-0 pointer-events-none'
+        }`}
       >
-        <div className="flex items-center justify-between pb-3 border-b border-[#E8EAED]">
+        <div className="p-3.5 border-b border-[#E8EAED] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#16A34A]" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#151A22]">
+            <h2 className="text-xs font-bold text-[#151A22] uppercase tracking-wide">
               Manajemen Layer
-            </h4>
+            </h2>
           </div>
-          <span className="text-[10px] text-[#6F747C] font-mono">EPSG:4326</span>
+          <span className="text-[10px] text-[#6F747C] bg-gray-100 px-2 py-0.5 rounded font-mono">
+            EPSG:4326
+          </span>
         </div>
 
-        {/* Layer list with sliders */}
-        <div className="divide-y divide-[#E8EAED] mt-2">
+        <div className="p-3 space-y-3 overflow-y-auto flex-1 text-xs">
           {layers.map((layer) => (
-            <div key={layer.slug} className="py-2.5">
+            <div
+              key={layer.id}
+              className={`p-2.5 rounded-[6px] border transition-colors ${
+                layer.active ? 'bg-white border-[#E8EAED] shadow-xs' : 'bg-gray-50/70 border-transparent opacity-60'
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#151A22]">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={layer.active}
                     onChange={() => toggleLayer(layer.slug)}
-                    className="rounded border-[#E8EAED] text-[#16A34A] focus:ring-brand-500 h-3.5 w-3.5"
+                    className="w-3.5 h-3.5 rounded text-[#16A34A] focus:ring-[#16A34A]"
                   />
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: layer.color }}
                   />
-                  <span>{layer.title}</span>
+                  <span className="font-semibold text-[#151A22] text-[11px] leading-tight">
+                    {layer.title}
+                  </span>
                 </label>
+
                 <button
                   onClick={() => toggleLayer(layer.slug)}
-                  className="text-[#6F747C] hover:text-[#151A22]"
+                  className="text-[#6F747C] hover:text-[#151A22] p-0.5"
+                  title={layer.active ? 'Sembunyikan' : 'Tampilkan'}
                 >
-                  {layer.active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  {layer.active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
                 </button>
               </div>
 
               {layer.active && (
-                <div className="mt-2 pl-6 pr-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#6F747C]">Opasitas:</span>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="1"
-                      step="0.05"
-                      value={layer.opacity}
-                      onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
-                      className="w-full h-1 bg-gray-200 rounded appearance-none cursor-pointer accent-[#16A34A]"
-                    />
-                    <span className="text-[10px] text-[#6F747C] w-6 text-right">
-                      {Math.round(layer.opacity * 100)}%
-                    </span>
+                <div className="mt-2.5 space-y-1.5 pl-6 border-l-2 border-gray-100">
+                  <div className="flex items-center justify-between text-[10px] text-[#6F747C]">
+                    <span>Opasitas Layer</span>
+                    <span>{Math.round(layer.opacity * 100)}%</span>
                   </div>
-                  <p className="text-[10px] text-[#6F747C] italic">{layer.description}</p>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1"
+                    step="0.05"
+                    value={layer.opacity}
+                    onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#16A34A]"
+                  />
+                  <p className="text-[10px] text-[#6F747C] italic leading-tight">
+                    {layer.description}
+                  </p>
                 </div>
               )}
             </div>
           ))}
         </div>
 
-        {/* Legend Box */}
-        <div className="mt-4 pt-3 border-t border-[#E8EAED]">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#6F747C] block mb-2">
+        {/* Legend Footer */}
+        <div className="p-3 border-t border-[#E8EAED] bg-gray-50/80 rounded-b-[8px]">
+          <span className="text-[10px] font-bold text-[#6F747C] uppercase block mb-1.5">
             Legenda Bahaya / Risiko
           </span>
-          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+          <div className="grid grid-cols-2 gap-1.5 text-[10px] text-[#151A22]">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-[2px] bg-[#16A34A]" />
-              <span className="text-[#151A22]">Rendah</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#22C55E]" />
+              <span>Rendah</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-[2px] bg-[#EAB308]" />
-              <span className="text-[#151A22]">Sedang</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#EAB308]" />
+              <span>Sedang</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-[2px] bg-[#F97316]" />
-              <span className="text-[#151A22]">Tinggi</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#F97316]" />
+              <span>Tinggi</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-[2px] bg-[#DC2626]" />
-              <span className="text-[#151A22]">Sangat Tinggi</span>
+              <span className="w-2.5 h-2.5 rounded bg-[#EF4444]" />
+              <span>Sangat Tinggi</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 4. Full-bleed Map Canvas */}
-      <div className="flex-1 h-full w-full relative">
-        <div ref={mapContainer} className="w-full h-full" />
-      </div>
+      {/* Layer Panel Toggle Button (Floating) */}
+      <button
+        onClick={() => setLayerPanelOpen(!layerPanelOpen)}
+        className="absolute bottom-5 left-4 md:left-20 z-10 bg-white border border-[#E8EAED] text-[#151A22] rounded-[6px] px-3 py-1.5 shadow-md flex items-center gap-1.5 text-xs font-semibold hover:bg-gray-50"
+      >
+        <Layers className="w-3.5 h-3.5 text-[#16A34A]" />
+        <span>{layerPanelOpen ? 'Sembunyikan Panel' : 'Panel Layer'}</span>
+      </button>
 
-      {/* 5. Right Feature Inspection Drawer / Summary Panel */}
+      {/* 4. Map Canvas Container */}
+      <div ref={mapContainer} className="w-full h-full relative" />
+
+      {/* 5. Right Feature Inspection Drawer */}
       {selectedFeature && (
-        <aside className="absolute right-4 top-16 bottom-4 w-84 md:w-96 bg-white/95 backdrop-blur-sm rounded-[8px] border border-[#E8EAED] p-5 shadow-sm z-10 flex flex-col justify-between overflow-y-auto">
-          <div>
-            <div className="flex items-start justify-between border-b border-[#E8EAED] pb-3">
-              <div>
-                <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider">
-                  {selectedFeature.type}
+        <div className="absolute top-16 right-4 z-10 w-80 md:w-96 bg-white/95 backdrop-blur-md rounded-[8px] border border-[#E8EAED] shadow-xl p-4 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
+          <div className="flex items-start justify-between border-b border-[#E8EAED] pb-3">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#16A34A] block">
+                {selectedFeature.type}
+              </span>
+              <h3 className="text-sm font-bold text-[#151A22] leading-snug">
+                {selectedFeature.title}
+              </h3>
+            </div>
+            <button
+              onClick={() => setSelectedFeature(null)}
+              className="text-[#6F747C] hover:text-[#151A22] p-1"
+              aria-label="Tutup Detail"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-[#6F747C]">Status Operasional</span>
+              <StatusChip
+                label={selectedFeature.status}
+                status={selectedFeature.status.includes('Aktif') ? 'valid' : 'pending'}
+              />
+            </div>
+
+            {selectedFeature.hazardClass && (
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <span className="text-[#6F747C]">Tingkat Kerawanan</span>
+                <span className={`font-bold ${
+                  selectedFeature.hazardClass === 'Rendah'
+                    ? 'text-green-600'
+                    : selectedFeature.hazardClass === 'Sedang'
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+                }`}>
+                  {selectedFeature.hazardClass}
                 </span>
-                <h3 className="text-base font-bold text-[#151A22] mt-0.5">
-                  {selectedFeature.title}
-                </h3>
-                {selectedFeature.dusun && (
-                  <p className="text-xs text-[#6F747C] mt-0.5">{selectedFeature.dusun}</p>
-                )}
               </div>
-              <button
-                onClick={() => setSelectedFeature(null)}
-                className="text-[#6F747C] hover:text-[#151A22] text-sm font-bold p-1"
-                title="Tutup"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              <StatusChip status="valid" label={selectedFeature.status} />
-              {selectedFeature.hazardClass && (
-                <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200">
-                  Zona {selectedFeature.hazardClass}
-                </span>
-              )}
-            </div>
-
-            <p className="mt-4 text-xs text-[#6F747C] leading-relaxed">
-              {selectedFeature.description}
-            </p>
+            )}
 
             {selectedFeature.debit && (
-              <div className="mt-4 p-3 bg-blue-50/50 rounded-[6px] border border-blue-100 text-xs">
-                <span className="text-[#6F747C] block text-[11px]">Pengukuran Debit Air Lapangan:</span>
-                <span className="font-semibold text-[#2563EB] text-sm">
-                  {selectedFeature.debit}
-                </span>
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <span className="text-[#6F747C]">Kapasitas / Debit</span>
+                <span className="font-semibold text-[#151A22]">{selectedFeature.debit}</span>
               </div>
             )}
 
+            <div>
+              <span className="text-[#6F747C] font-semibold block mb-1">Lokasi Administrasi</span>
+              <div className="flex items-center gap-1.5 text-[#151A22]">
+                <MapPin className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                <span>{selectedFeature.dusun}</span>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[#6F747C] font-semibold block mb-1">Deskripsi Kondisi</span>
+              <p className="text-[#4A4F56] leading-relaxed bg-gray-50 p-2.5 rounded border border-gray-100">
+                {selectedFeature.description}
+              </p>
+            </div>
+
             {selectedFeature.coordinates && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-[6px] border border-[#E8EAED] text-xs font-mono text-[#6F747C]">
-                <span>Lng: {selectedFeature.coordinates[0].toFixed(5)}, Lat: {selectedFeature.coordinates[1].toFixed(5)}</span>
+              <div className="pt-2 flex gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="flex-1 flex items-center justify-center gap-1"
+                  onClick={() =>
+                    openInGoogleMaps(
+                      selectedFeature.coordinates![0],
+                      selectedFeature.coordinates![1]
+                    )
+                  }
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>Rute Google Maps</span>
+                </Button>
               </div>
             )}
           </div>
-
-          <div className="pt-4 border-t border-[#E8EAED] space-y-2 mt-4">
-            {selectedFeature.coordinates && (
-              <Button
-                variant="primary"
-                size="sm"
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() =>
-                  openInGoogleMaps(
-                    selectedFeature.coordinates![0],
-                    selectedFeature.coordinates![1]
-                  )
-                }
-              >
-                <Navigation className="w-3.5 h-3.5" />
-                <span>Buka Rute Navigasi (Google Maps)</span>
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => setSelectedFeature(null)}
-            >
-              Tutup Rincian
-            </Button>
-          </div>
-        </aside>
+        </div>
       )}
     </div>
   );

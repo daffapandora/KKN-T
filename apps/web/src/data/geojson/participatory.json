@@ -1,0 +1,90 @@
+{
+  "type": "FeatureCollection",
+  "name": "Peta_Partisipatif_Warga_Kemitir",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "pf-pipe-1",
+        "name": "Jalur Pipa Transmisi Swadaya RT 02",
+        "category": "Infrastruktur Pipa Air",
+        "condition": "Rawan Retak / Terjepit Tebing",
+        "color": "#3B82F6",
+        "length_meters": 350,
+        "diameter_inch": 2.0,
+        "description": "Pipa transmisi dari Tuk Gedang menuju bak penampung RT 02. Menyeberangi jurang sedalam 8 meter."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [110.3210, -7.2340],
+          [110.3195, -7.2325],
+          [110.3180, -7.2310],
+          [110.3160, -7.2310]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "pf-pipe-2",
+        "name": "Jalur Pipa Distribusi Dusun Garon",
+        "category": "Infrastruktur Pipa Air",
+        "condition": "Beroperasi Baik",
+        "color": "#06B6D4",
+        "length_meters": 220,
+        "diameter_inch": 1.5,
+        "description": "Pipa distribusi swadaya warga petani palawija Dusun Garon."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [110.3235, -7.2285],
+          [110.3255, -7.2295],
+          [110.3275, -7.2305]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "pf-area-1",
+        "name": "Area Lahan Sawah Terdampak Paling Parah (Blok B)",
+        "category": "Lahan Kritis Kekeringan",
+        "condition": "Tanah Retak > 10 cm",
+        "color": "#8B5CF6",
+        "area_ha": 14.5,
+        "description": "Kawasan sawah tadah hujan 32 petani yang gagal tanam padi periode Juli-September."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [110.3245, -7.2270],
+            [110.3285, -7.2280],
+            [110.3275, -7.2315],
+            [110.3230, -7.2305],
+            [110.3245, -7.2270]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "pf-report-1",
+        "name": "Laporan Warga: Pipa Paralon Pecah Akibat Longsor Kecil",
+        "category": "Laporan Warga Terverifikasi",
+        "status": "Tervalidasi Perangkat Desa",
+        "color": "#EC4899",
+        "reporter": "Warga RT 02",
+        "description": "Titik kebocoran air bersih swadaya; membutuhkan sambungan pipa baru sepanjang 12 meter."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [110.3182, -7.2318]
+      }
+    }
+  ]
+}
