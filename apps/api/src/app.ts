@@ -3,9 +3,11 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
-import { config } from './config';
+import { config, getAllowedCorsOrigins } from './config';
 import { errorHandler } from './plugins/errorHandler';
+import { registerAuthPlugin } from './plugins/auth';
 import { healthRoutes } from './modules/health/health.route';
+import { authRoutes } from './modules/auth/auth.route';
 import { dashboardRoutes } from './modules/dashboard/dashboard.route';
 import { layersRoutes } from './modules/layers/layers.route';
 import { waterSourcesRoutes } from './modules/water-sources/water-sources.route';
@@ -25,9 +27,9 @@ export function buildApp(): FastifyInstance {
   });
   app.register(sensible);
 
-  // CORS configuration
+  // CORS configuration (enforces allow-list, strictly disallows * in production)
   app.register(cors, {
-    origin: config.CORS_ORIGIN === '*' ? true : [config.CORS_ORIGIN],
+    origin: getAllowedCorsOrigins(),
     credentials: true,
   });
 
@@ -40,8 +42,12 @@ export function buildApp(): FastifyInstance {
   // Global standardized error handler
   app.setErrorHandler(errorHandler);
 
+  // Register Authentication & RBAC Plugin
+  app.register(registerAuthPlugin);
+
   // Register Routes
   app.register(healthRoutes);
+  app.register(authRoutes);
   app.register(dashboardRoutes);
   app.register(layersRoutes);
   app.register(waterSourcesRoutes);
@@ -49,3 +55,4 @@ export function buildApp(): FastifyInstance {
 
   return app;
 }
+
