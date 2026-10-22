@@ -55,6 +55,23 @@ export const MapPage: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Basemap state: Streets vs Satellite (Mapbox / Esri high-res satellite)
   const [basemap, setBasemap] = useState<'streets' | 'satellite'>('satellite');
@@ -149,6 +166,7 @@ export const MapPage: React.FC = () => {
 
   const [layerPanelOpen, setLayerPanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
 
   // Sample water source pins
   const waterSourcePins = [
@@ -202,16 +220,224 @@ export const MapPage: React.FC = () => {
     },
   ];
 
+  interface SearchItem {
+    id: string;
+    name: string;
+    categoryLabel: string;
+    dusun: string;
+    coordinates: [number, number];
+    debit?: string;
+    hazardClass?: string;
+    status: string;
+    description: string;
+  }
+
+  const searchableFeatures: SearchItem[] = [
+    {
+      id: 'ws-1',
+      name: 'Tuk Mulyo (Mata Air Utama)',
+      categoryLabel: 'Mata Air Alami',
+      dusun: 'RT 01 RW 01, Dusun Kemitir Lor',
+      coordinates: [110.3142, -7.2268],
+      debit: '12.5 liter / detik',
+      hazardClass: 'Rendah',
+      status: 'Aktif Mengalir',
+      description: 'Sumber air minum utama warga Kemitir Lor. Bak penampung permanen 15.000 liter melayani 145 KK.',
+    },
+    {
+      id: 'ws-2',
+      name: 'Sumur Bor Sentral RW 02',
+      categoryLabel: 'Sumur Bor',
+      dusun: 'RT 02 RW 02, Dusun Kemitir Kidul',
+      coordinates: [110.3185, -7.2295],
+      debit: '8.0 liter / detik',
+      hazardClass: 'Sedang',
+      status: 'Aktif Beroperasi',
+      description: 'Sumur bor dalam bantuan pemerintah dengan pompa celup listrik dan akses jalan aspal leluasa truk tangki.',
+    },
+    {
+      id: 'ws-3',
+      name: 'Tuk Gedang Kidul',
+      categoryLabel: 'Mata Air Alami',
+      dusun: 'RT 04 RW 02, Dusun Kemitir Kidul',
+      coordinates: [110.321, -7.234],
+      debit: '2.1 liter / detik',
+      hazardClass: 'Tinggi',
+      status: 'Debit Menurun',
+      description: 'Mata air lereng perbukitan, debit mengalami penurunan drastis di puncak musim kemarau.',
+    },
+    {
+      id: 'ws-4',
+      name: 'Embung Pertanian Garon',
+      categoryLabel: 'Embung Pertanian',
+      dusun: 'Dusun Garon',
+      coordinates: [110.3095, -7.2235],
+      debit: 'Tampungan 4.000 m3',
+      hazardClass: 'Tinggi',
+      status: 'Sedimentasi Tinggi',
+      description: 'Embung penampung hujan untuk irigasi sawah sayur kubis, cabai, dan labu siam kelompok tani Garon.',
+    },
+    {
+      id: 'ws-5',
+      name: 'Mata Air Kalitengah Swadaya',
+      categoryLabel: 'Mata Air Swadaya',
+      dusun: 'Dusun Kalitengah',
+      coordinates: [110.3255, -7.238],
+      debit: '6.2 liter / detik',
+      hazardClass: 'Rendah',
+      status: 'Aktif Swadaya',
+      description: 'Mata air pegunungan swadaya dengan pipa gravitasi langsung menuju 4 tandon pembagi lingkungan.',
+    },
+    {
+      id: 'vil-1',
+      name: 'Dusun Kemitir Lor',
+      categoryLabel: 'Wilayah Dusun',
+      dusun: 'Desa Kemitir (Bagian Utara)',
+      coordinates: [110.3145, -7.2265],
+      status: 'Pemukiman Terpadat',
+      description: 'Dusun Kemitir Lor dengan wilayah RT 01-03, pemukiman utama dengan cakupan pipa Tuk Mulyo.',
+    },
+    {
+      id: 'vil-2',
+      name: 'Dusun Kemitir Kidul',
+      categoryLabel: 'Wilayah Dusun',
+      dusun: 'Desa Kemitir (Bagian Selatan)',
+      coordinates: [110.318, -7.230],
+      status: 'Zona Rawan Kemarau',
+      description: 'Dusun Kemitir Kidul pada ketinggian 1.050 mdpl dengan kerentanan kekeringan perbukitan atas.',
+    },
+    {
+      id: 'vil-3',
+      name: 'Dusun Garon',
+      categoryLabel: 'Wilayah Dusun',
+      dusun: 'Desa Kemitir (Sentra Pertanian)',
+      coordinates: [110.309, -7.223],
+      status: 'Sentra Hortikultura',
+      description: 'Dusun Garon dengan hamparan 42 hektar sawah tadah hujan sayur mayur dan palawija.',
+    },
+    {
+      id: 'vil-4',
+      name: 'Dusun Kalitengah',
+      categoryLabel: 'Wilayah Dusun',
+      dusun: 'Desa Kemitir (Lereng Terjal)',
+      coordinates: [110.325, -7.2375],
+      status: 'Topografi Terjal',
+      description: 'Dusun Kalitengah di lereng bukit timur dengan sistem air swadaya masyarakat.',
+    },
+    {
+      id: 'vil-5',
+      name: 'Kantor Balai Desa Kemitir',
+      categoryLabel: 'Pusat Pemerintahan',
+      dusun: 'Pusat Desa Kemitir, Kec. Sumowono',
+      coordinates: [110.3155, -7.2285],
+      status: 'Pusat Posko Siaga',
+      description: 'Pusat administrasi desa, titik kumpul evakuasi, dan koordinasi bantuan logistik BPBD.',
+    },
+    {
+      id: 'inf-1',
+      name: 'Jalur Pipa Transmisi RT 02 Kidul',
+      categoryLabel: 'Infrastruktur Pipa',
+      dusun: 'Dusun Kemitir Kidul',
+      coordinates: [110.3195, -7.2315],
+      status: 'Perlu Penggantian HDPE',
+      description: 'Jalur pipa paralon 350 meter melintasi zona kemiringan terjal dan tanah retak lereng.',
+    },
+    {
+      id: 'inf-2',
+      name: 'Tandon Air Balai RT 02 (5.000 L)',
+      categoryLabel: 'Tandon Penampung',
+      dusun: 'Dusun Kemitir Kidul',
+      coordinates: [110.3185, -7.2295],
+      status: 'Titik Drop Tangki',
+      description: 'Titik serah tandon umum penampungan bantuan dropping air bersih mobil tangki BPBD Semarang.',
+    },
+    {
+      id: 'haz-1',
+      name: 'Zona Prioritas 1: Kemitir Kidul Atas',
+      categoryLabel: 'Zona Prioritas Darurat',
+      dusun: 'RT 02 Kemitir Kidul',
+      coordinates: [110.319, -7.231],
+      hazardClass: 'Sangat Tinggi',
+      status: 'Sangat Mendesak (Skor 92.4)',
+      description: 'Prioritas tertinggi: mata air lokal surut >75% dan 380 jiwa warga mengalami keterbatasan air bersih.',
+    },
+    {
+      id: 'haz-2',
+      name: 'Zona Prioritas 2: Sawah Tadah Hujan Garon',
+      categoryLabel: 'Zona Prioritas Tani',
+      dusun: 'Dusun Garon',
+      coordinates: [110.309, -7.223],
+      hazardClass: 'Tinggi',
+      status: 'Prioritas Tinggi (Skor 84.1)',
+      description: 'Kekeringan 42 hektar lahan sawah sayur palawija akibat penyusutan air embung pertanian.',
+    },
+  ];
+
+  const searchResults = searchQuery.trim()
+    ? searchableFeatures.filter((item) => {
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          item.name.toLowerCase().includes(q) ||
+          item.dusun.toLowerCase().includes(q) ||
+          item.categoryLabel.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          item.status.toLowerCase().includes(q)
+        );
+      })
+    : [];
+
+  const handleSelectSearchResult = (item: (typeof searchableFeatures)[0]) => {
+    // Automatically enable corresponding layer so the visual feature is visible on map
+    if (item.id.startsWith('inf-')) {
+      setLayers((prev) =>
+        prev.map((l) => (l.slug === 'peta-partisipatif' ? { ...l, active: true } : l))
+      );
+    } else if (item.id.startsWith('haz-')) {
+      setLayers((prev) =>
+        prev.map((l) =>
+          l.slug === 'prioritas' || l.slug === 'bahaya-kekeringan' ? { ...l, active: true } : l
+        )
+      );
+    } else if (item.id.startsWith('ws-')) {
+      setLayers((prev) =>
+        prev.map((l) => (l.slug === 'sumber-air' ? { ...l, active: true } : l))
+      );
+    }
+
+    if (mapInstance.current) {
+      mapInstance.current.flyTo({
+        center: item.coordinates,
+        zoom: 16.5,
+        pitch: 35,
+        bearing: 0,
+        duration: 1200,
+      });
+    }
+
+    setSelectedFeature({
+      title: item.name,
+      type: item.categoryLabel,
+      status: item.status,
+      dusun: item.dusun,
+      description: item.description,
+      debit: item.debit,
+      hazardClass: item.hazardClass,
+      coordinates: item.coordinates,
+    });
+
+    setSearchDropdownOpen(false);
+  };
+
   // Helper to get basemap style
   const getBasemapStyle = (type: 'streets' | 'satellite'): maplibregl.StyleSpecification => {
     if (type === 'satellite') {
       const satelliteTiles = mapboxToken
         ? [
-            `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.webp?access_token=${mapboxToken}`,
-          ]
+          `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.webp?access_token=${mapboxToken}`,
+        ]
         : [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          ];
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        ];
 
       return {
         version: 8,
@@ -787,42 +1013,147 @@ export const MapPage: React.FC = () => {
       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
         {/* Left: Search Box & Layer Panel Trigger */}
         <div className="flex items-center gap-2.5 pointer-events-auto">
-          {/* Search Box */}
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 px-3.5 h-11 flex items-center gap-2.5 shadow-md w-60 sm:w-72 transition-all focus-within:ring-2 focus-within:ring-emerald-500">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari mata air, dusun, pipa..."
-              className="w-full text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-slate-400 hover:text-slate-600 p-0.5"
-                aria-label="Hapus pencarian"
-              >
-                <X className="w-4 h-4" />
-              </button>
+          {/* Search Box with Autocomplete Dropdown */}
+          <div ref={searchContainerRef} className="relative">
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 px-3.5 h-11 flex items-center gap-2.5 shadow-md w-60 sm:w-80 transition-all focus-within:ring-2 focus-within:ring-emerald-500">
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchDropdownOpen(true);
+                }}
+                onFocus={() => setSearchDropdownOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (searchResults.length > 0) {
+                      handleSelectSearchResult(searchResults[0]);
+                    }
+                  } else if (e.key === 'Escape') {
+                    setSearchDropdownOpen(false);
+                  }
+                }}
+                placeholder="Cari mata air, dusun, pipa..."
+                className="w-full text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchDropdownOpen(false);
+                  }}
+                  className="text-slate-400 hover:text-slate-600 p-0.5"
+                  aria-label="Hapus pencarian"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Live Autocomplete Dropdown */}
+            {searchDropdownOpen && (
+              <div className="absolute top-full mt-2 left-0 w-80 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-2xl border border-slate-200/90 shadow-2xl p-2 z-50 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    {searchQuery.trim()
+                      ? `Hasil Pencarian (${searchResults.length})`
+                      : 'Rekomendasi Pencarian'}
+                  </span>
+                  <button
+                    onClick={() => setSearchDropdownOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 text-xs p-1"
+                    aria-label="Tutup Hasil"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="mt-1 divide-y divide-slate-100">
+                  {(searchQuery.trim() ? searchResults : searchableFeatures.slice(0, 6)).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectSearchResult(item)}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 transition-colors flex items-start gap-2.5 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center shrink-0 transition-colors mt-0.5">
+                        {item.categoryLabel.includes('Mata Air') || item.categoryLabel.includes('Sumur') ? (
+                          <Droplets className="w-4 h-4" />
+                        ) : item.categoryLabel.includes('Dusun') || item.categoryLabel.includes('Pemerintahan') ? (
+                          <MapPin className="w-4 h-4" />
+                        ) : item.categoryLabel.includes('Pipa') || item.categoryLabel.includes('Tandon') ? (
+                          <Activity className="w-4 h-4" />
+                        ) : (
+                          <ShieldAlert className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                            {item.name}
+                          </span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            {item.categoryLabel}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">{item.dusun}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
+                            {item.status}
+                          </span>
+                          {item.debit && (
+                            <span className="text-[10px] text-blue-700 font-medium bg-blue-50 px-1.5 py-0.5 rounded">
+                              {item.debit}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+
+                  {searchQuery.trim() && searchResults.length === 0 && (
+                    <div className="p-4 text-center">
+                      <p className="text-xs font-semibold text-slate-700">
+                        Tidak ditemukan hasil untuk "{searchQuery}"
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Coba kata kunci: Tuk Mulyo, Sumur Bor, Garon, Pipa, atau Dusun.
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 justify-center mt-3">
+                        {['Tuk Mulyo', 'Sumur Bor', 'Kemitir Kidul', 'Embung Garon', 'Pipa'].map((kw) => (
+                          <button
+                            key={kw}
+                            onClick={() => {
+                              setSearchQuery(kw);
+                              setSearchDropdownOpen(true);
+                            }}
+                            className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg text-slate-700 font-medium transition-colors"
+                          >
+                            {kw}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
           {/* Single Layer Panel Trigger Button */}
           <button
             onClick={() => setLayerPanelOpen(!layerPanelOpen)}
-            className={`h-11 px-4 rounded-2xl border flex items-center gap-2 text-sm font-bold shadow-md transition-all ${
-              layerPanelOpen
+            className={`h-11 px-4 rounded-2xl border flex items-center gap-2 text-sm font-bold shadow-md transition-all ${layerPanelOpen
                 ? 'bg-slate-900 text-white border-transparent'
                 : 'bg-white/95 backdrop-blur-xl text-slate-800 border-slate-200/90 hover:bg-slate-50'
-            }`}
+              }`}
+            aria-label="Buka Opsi Layer Peta"
           >
             <Sliders className={`w-4 h-4 ${layerPanelOpen ? 'text-emerald-400' : 'text-emerald-600'}`} />
             <span>Layer Peta</span>
             <span
-              className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${
-                layerPanelOpen ? 'bg-emerald-500 text-slate-950' : 'bg-emerald-600 text-white'
-              }`}
+              className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${layerPanelOpen ? 'bg-emerald-500 text-slate-950' : 'bg-emerald-600 text-white'
+                }`}
             >
               {activeLayerCount}
             </span>
@@ -833,152 +1164,183 @@ export const MapPage: React.FC = () => {
         <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 p-1 flex items-center gap-1 shadow-md pointer-events-auto">
           <button
             onClick={() => setBasemap('satellite')}
-            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${
-              basemap === 'satellite'
+            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${basemap === 'satellite'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
+              }`}
           >
-            🛰️ Satelit
+            Satelit
           </button>
           <button
             onClick={() => setBasemap('streets')}
-            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${
-              basemap === 'streets'
+            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${basemap === 'streets'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            🗺️ Peta Jalan
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Slide-out Left Layer Management Sheet */}
-      <div
-        className={`absolute top-18 left-4 z-20 w-84 sm:w-92 bg-white/98 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-2xl transition-all duration-300 max-h-[calc(100vh-6.5rem)] flex flex-col ${
-          layerPanelOpen
-            ? 'translate-x-0 opacity-100 pointer-events-auto'
-            : '-translate-x-full opacity-0 pointer-events-none'
-        }`}
-      >
-        {/* Header */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <Sliders className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 leading-tight">
-                Layer & Data Spasial
-              </h3>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Kontrol visual & transparansi tematik
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setLayerPanelOpen(false)}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
-            title="Tutup Panel Layer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Scrollable Layer Switches */}
-        <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1">
-          {layers.map((layer) => (
-            <div
-              key={layer.id}
-              className={`p-3 rounded-2xl border transition-all ${
-                layer.active
-                  ? 'bg-white border-slate-200/90 shadow-xs'
-                  : 'bg-slate-50/60 border-transparent opacity-65'
               }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
-                    style={{ backgroundColor: layer.color }}
-                  />
-                  <div>
-                    <span className="font-bold text-slate-900 text-sm block leading-snug">
-                      {layer.title}
-                    </span>
-                    <span className="text-[11px] text-slate-500 block leading-tight">
-                      {layer.description}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Apple iOS Toggle Switch */}
-                <button
-                  type="button"
-                  onClick={() => toggleLayer(layer.slug)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
-                    layer.active ? 'bg-emerald-600' : 'bg-slate-300'
-                  }`}
-                  aria-pressed={layer.active}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      layer.active ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Opacity slider with clean text and zero clipping */}
-              {layer.active && (
-                <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 px-0.5">
-                  <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                    <span>Transparansi / Opasitas</span>
-                    <span className="font-bold text-slate-900">
-                      {Math.round(layer.opacity * 100)}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="1"
-                    step="0.05"
-                    value={layer.opacity}
-                    onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
-                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+          >
+            Peta Jalan
+          </button>
         </div>
+      </div>
 
-        {/* Legend Footer */}
-        <div className="p-3.5 border-t border-slate-100 bg-slate-50/90 rounded-b-3xl">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-            Legenda Zona Bahaya / Risiko
-          </span>
-          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#22C55E]" />
-              <span>Rendah (Aman)</span>
+      {/* 3. Apple-Grade Layer Management Sheet */}
+      {layerPanelOpen && (
+        <div className="absolute top-20 left-4 z-30 w-80 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-2xl max-h-[calc(100vh-6.5rem)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Header */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                  Layer & Data Spasial
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Pilihan tematik & transparansi layer
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#EAB308]" />
-              <span>Sedang (Waspada)</span>
+            <button
+              onClick={() => setLayerPanelOpen(false)}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+              title="Tutup Panel Layer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick Thematic Preset Filter (Restored & elevated to match original feature) */}
+          <div className="p-3 border-b border-slate-100 bg-slate-50/70 shrink-0">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+              Pilihan Cepat / Mode Tematik
+            </span>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { id: 'all', label: 'Semua', color: 'bg-slate-900 text-white' },
+                { id: 'hazard', label: 'Bahaya', color: 'bg-amber-600 text-white' },
+                { id: 'risk', label: 'Risiko', color: 'bg-rose-600 text-white' },
+                { id: 'water', label: 'Sumber Air', color: 'bg-blue-600 text-white' },
+                { id: 'participatory', label: 'Partisipatif', color: 'bg-purple-600 text-white' },
+                { id: 'priority', label: 'Prioritas', color: 'bg-red-700 text-white' },
+              ].map((preset) => {
+                const isActive =
+                  activeModeParam === preset.id ||
+                  (preset.id === 'all' && (!activeModeParam || activeModeParam === 'all')) ||
+                  (preset.id === 'hazard' && activeModeParam === 'bahaya-kekeringan') ||
+                  (preset.id === 'risk' && activeModeParam === 'risiko-kekeringan') ||
+                  (preset.id === 'water' && activeModeParam === 'sumber-air') ||
+                  (preset.id === 'participatory' && activeModeParam === 'peta-partisipatif') ||
+                  (preset.id === 'priority' && activeModeParam === 'prioritas');
+
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => setThematicFilter(preset.id)}
+                    className={`py-1.5 px-2 text-xs font-bold rounded-xl transition-all text-center ${
+                      isActive
+                        ? `${preset.color} shadow-xs scale-102`
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#F97316]" />
-              <span>Tinggi (Siaga)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#EF4444]" />
-              <span>Sangat Tinggi (Darurat)</span>
+          </div>
+
+          {/* Scrollable Layer Switches */}
+          <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1">
+            {layers.map((layer) => (
+              <div
+                key={layer.id}
+                className={`p-3 rounded-2xl border transition-all ${layer.active
+                    ? 'bg-white border-slate-200/90 shadow-xs'
+                    : 'bg-slate-50/60 border-transparent opacity-65'
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
+                      style={{ backgroundColor: layer.color }}
+                    />
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm block leading-snug">
+                        {layer.title}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block leading-tight">
+                        {layer.description}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Apple iOS Toggle Switch */}
+                  <button
+                    type="button"
+                    onClick={() => toggleLayer(layer.slug)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${layer.active ? 'bg-emerald-600' : 'bg-slate-300'
+                      }`}
+                    aria-pressed={layer.active}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${layer.active ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Opacity slider with clean text and zero clipping */}
+                {layer.active && (
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 px-0.5">
+                    <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
+                      <span>Transparansi / Opasitas</span>
+                      <span className="font-bold text-slate-900">
+                        {Math.round(layer.opacity * 100)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.05"
+                      value={layer.opacity}
+                      onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Legend Footer */}
+          <div className="p-3.5 border-t border-slate-100 bg-slate-50/90 rounded-b-3xl shrink-0">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+              Legenda Zona Bahaya / Risiko
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-[#22C55E]" />
+                <span>Rendah (Aman)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-[#EAB308]" />
+                <span>Sedang (Waspada)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-[#F97316]" />
+                <span>Tinggi (Siaga)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-[#EF4444]" />
+                <span>Sangat Tinggi (Darurat)</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 4. Bottom-Right Apple Map Navigation Pill (Single Unified Island) */}
       <div className="absolute bottom-6 right-6 z-10 flex flex-col items-center bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl p-1 select-none">
@@ -1019,7 +1381,7 @@ export const MapPage: React.FC = () => {
 
       {/* 5. Apple Right Inspection Sheet (Detail Fitur yang Dipilih) */}
       {selectedFeature && (
-        <div className="absolute top-18 right-4 z-20 w-84 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-2xl p-6 space-y-4 max-h-[calc(100vh-6.5rem)] overflow-y-auto animate-in slide-in-from-right-4 duration-200">
+        <div className="absolute top-20 right-4 z-30 w-80 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-2xl p-6 space-y-4 max-h-[calc(100vh-6.5rem)] overflow-y-auto animate-in slide-in-from-right-4 duration-200">
           <div className="flex items-start justify-between border-b border-slate-100 pb-3.5">
             <div>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80 mb-1.5">
@@ -1052,13 +1414,12 @@ export const MapPage: React.FC = () => {
               <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
                 <span className="text-xs text-slate-500 font-medium">Tingkat Kerawanan</span>
                 <span
-                  className={`font-bold text-xs uppercase px-2.5 py-1 rounded-full ${
-                    selectedFeature.hazardClass === 'Rendah'
+                  className={`font-bold text-xs uppercase px-2.5 py-1 rounded-full ${selectedFeature.hazardClass === 'Rendah'
                       ? 'bg-emerald-100 text-emerald-800'
                       : selectedFeature.hazardClass === 'Sedang'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-rose-100 text-rose-800'
-                  }`}
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
                 >
                   {selectedFeature.hazardClass}
                 </span>
