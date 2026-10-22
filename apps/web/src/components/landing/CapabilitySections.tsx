@@ -276,13 +276,13 @@ export const CapabilitySections: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-8 text-center pt-4 border-t border-[#E8EAED]">
+        <div className="mt-8 text-center pt-4 border-t border-slate-100">
           <Link
-            to="/partisipatif"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#151A22] hover:text-[#7C3AED] transition-colors"
+            to="/peta?mode=participatory"
+            className="inline-flex items-center gap-2 text-sm font-bold text-purple-700 hover:text-purple-800 transition-colors"
           >
             <span>{idCopy.capabilities.cap3.link}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>

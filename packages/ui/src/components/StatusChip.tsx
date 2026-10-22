@@ -25,46 +25,46 @@ export const StatusChip: React.FC<StatusChipProps> = ({
     switch (status) {
       case 'valid':
         displayLabel = displayLabel || 'Tervalidasi';
-        colorClasses = 'bg-green-50 text-green-700 border-green-200';
+        colorClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200/90 font-semibold';
         break;
       case 'rejected':
         displayLabel = displayLabel || 'Ditolak';
-        colorClasses = 'bg-red-50 text-red-700 border-red-200';
+        colorClasses = 'bg-rose-50 text-rose-800 border-rose-200/90 font-semibold';
         break;
       case 'pending':
       default:
         displayLabel = displayLabel || 'Menunggu Validasi';
-        colorClasses = 'bg-amber-50 text-amber-700 border-amber-200';
+        colorClasses = 'bg-amber-50 text-amber-800 border-amber-200/90 font-semibold';
         break;
     }
   } else if (riskClass) {
     switch (riskClass) {
       case 'low':
         displayLabel = displayLabel || 'Risiko Rendah';
-        colorClasses = 'bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]';
+        colorClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200/90 font-semibold';
         break;
       case 'medium':
         displayLabel = displayLabel || 'Risiko Sedang';
-        colorClasses = 'bg-[#FEFCE8] text-[#854D0E] border-[#FEF08A]';
+        colorClasses = 'bg-amber-50 text-amber-800 border-amber-200/90 font-semibold';
         break;
       case 'high':
         displayLabel = displayLabel || 'Risiko Tinggi';
-        colorClasses = 'bg-[#FFF7ED] text-[#C2410C] border-[#FFEDD5]';
+        colorClasses = 'bg-orange-50 text-orange-800 border-orange-200/90 font-semibold';
         break;
       case 'very_high':
         displayLabel = displayLabel || 'Risiko Sangat Tinggi';
-        colorClasses = 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]';
+        colorClasses = 'bg-rose-50 text-rose-800 border-rose-200/90 font-semibold';
         break;
     }
   }
 
-  const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs';
+  const sizeClasses = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-xs';
 
   return (
     <span
       className={twMerge(
         clsx(
-          'inline-flex items-center gap-1.5 font-medium rounded-full border tracking-wide uppercase',
+          'inline-flex items-center gap-1.5 font-semibold rounded-full border tracking-wide',
           sizeClasses,
           colorClasses,
           className
@@ -72,7 +72,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({
       )}
       {...props}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
+      <span className="w-2 h-2 rounded-full bg-current shrink-0" aria-hidden="true" />
       <span>{displayLabel}</span>
     </span>
   );

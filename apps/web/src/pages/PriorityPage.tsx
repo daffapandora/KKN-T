@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Button } from '@kemitir/ui';
-import { AlertTriangle, Award, CheckCircle2, ChevronRight, Droplets, MapPin, ShieldAlert, Truck } from 'lucide-react';
+import { AlertTriangle, Award, CheckCircle2, ChevronRight, Droplets, MapPin, ShieldAlert, Truck, Users, Calendar, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface PriorityArea {
@@ -29,12 +29,12 @@ export const PriorityPage: React.FC = () => {
       compositeScore: 92.4,
       affectedResidents: 380,
       farmAreaHa: 28.5,
-      primaryIssue: 'Mata air lokal (Tuk Gedang) mengalami penurunan debit >75% dan jalur pipa transmisi swadaya retak akibat pergerakan tanah.',
+      primaryIssue: 'Mata air lokal (Tuk Gedang) mengalami penurunan debit >75% dan jalur pipa transmisi swadaya retak akibat pergerakan tanah lereng.',
       nearestWaterSource: 'Sumur Bor Sentral RW 02',
       distanceToWaterMeters: 850,
       recommendedIntervention: [
-        'Dropping air bersih tangki darurat 2x seminggu',
-        'Penggantian 350m pipa paralon dengan pipa HDPE fleksibel',
+        'Dropping air bersih tangki darurat 2x seminggu ke balai warga',
+        'Penggantian 350m pipa paralon dengan pipa HDPE fleksibel tahan geser',
         'Pemasangan tandon penampungan darurat 5.000L di titik balai RT',
       ],
     },
@@ -47,13 +47,13 @@ export const PriorityPage: React.FC = () => {
       compositeScore: 84.1,
       affectedResidents: 240,
       farmAreaHa: 42.0,
-      primaryIssue: 'Kekeringan lahan pertanian sayur & palawija. Debit embung menyusut drastis.',
+      primaryIssue: 'Kekeringan lahan pertanian sayur kubis & cabai. Debit embung pertanian menyusut drastis ke level sedimentasi dasar.',
       nearestWaterSource: 'Embung Pertanian Garon',
       distanceToWaterMeters: 450,
       recommendedIntervention: [
-        'Pengerukan sedimentasi dasar embung pertanian',
-        'Bantuan pompa air alkon bergerak untuk mengambil air sungai dasar lembah',
-        'Sosialisasi jadwal giliran irigasi kelompok tani',
+        'Pengerukan sedimentasi dasar embung pertanian bersama kelompok tani',
+        'Bantuan pompa alkon bergerak untuk mengambil air sungai dasar lembah',
+        'Penetapan jadwal giliran jam pompa irigasi antar-blok sawah',
       ],
     },
     {
@@ -65,12 +65,12 @@ export const PriorityPage: React.FC = () => {
       compositeScore: 78.6,
       affectedResidents: 195,
       farmAreaHa: 18.0,
-      primaryIssue: 'Topografi lereng curam, warga harus menuruni tebing sejauh 600m untuk mengambil air bersih.',
+      primaryIssue: 'Topografi lereng terjal, warga lansia harus menuruni tebing curam sejauh 600m untuk mengambil air bersih ke mata air.',
       nearestWaterSource: 'Mata Air Kalitengah Swadaya',
       distanceToWaterMeters: 620,
       recommendedIntervention: [
-        'Pembangunan bak tandon antara (booster tank)',
-        'Perbaikan jalan setapak rabat beton menuju mata air untuk keamanan warga',
+        'Pembangunan bak penampung antara (booster tank) di elevasi tengah bukit',
+        'Perbaikan jalan setapak rabat beton menuju mata air untuk keselamatan warga',
       ],
     },
     {
@@ -82,165 +82,237 @@ export const PriorityPage: React.FC = () => {
       compositeScore: 61.2,
       affectedResidents: 310,
       farmAreaHa: 15.0,
-      primaryIssue: 'Tekanan air pipa berkurang di jam sibuk sore hari, namun debit mata air Tuk Mulyo masih mencukupi.',
+      primaryIssue: 'Tekanan air pipa berkurang di jam sibuk sore hari, namun debit mata air Tuk Mulyo masih stabil mengalir.',
       nearestWaterSource: 'Tuk Mulyo (Mata Air Utama)',
       distanceToWaterMeters: 320,
       recommendedIntervention: [
-        'Pembersihan filter bak penampung utama',
-        'Pemasangan meteran air swadaya untuk mencegah kebocoran liar',
+        'Pembersihan saringan filter bak penampung utama',
+        'Pemasangan stop kran pengatur tekanan pada percabangan pipa warga',
       ],
     },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* 1. Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-8 border-b border-[#E8EAED]">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#DC2626] uppercase tracking-wider mb-1">
-            <AlertTriangle className="w-4 h-4" />
-            <span>Menu 08: Analisis Pengambilan Keputusan (Decision Support System)</span>
+    <div className="flex-1 bg-slate-50/60 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        {/* 1. Apple Header */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_10px_25px_-5px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="space-y-2 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-bold tracking-wide uppercase">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Matriks Prioritas & Pengambilan Keputusan • APBDes & BPBD</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+              Prioritas Penanganan Kekeringan Desa
+            </h1>
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
+              Pemeringkatan objektif berbasis analisis spasial geodesi multi-kriteria. Menentukan alokasi prioritas bantuan tangki air BPBD, perbaikan pipa swadaya, dan dana tanggap darurat desa agar tepat sasaran.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-[#151A22] tracking-tight">
-            Prioritas Penanganan Kekeringan Desa Kemitir
-          </h1>
-          <p className="mt-1 text-sm text-[#6F747C] max-w-3xl">
-            Peringkat urgensi penanganan wilayah yang dihitung secara objektif berdasarkan gabungan indeks bahaya geodesi, kepadatan penduduk terdampak, dan jarak tempuh ke sumber air terdekat.
-          </p>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <Link to="/peta?mode=priority">
+              <Button variant="primary" size="lg" className="gap-2 shadow-sm">
+                <MapPin className="w-5 h-5 text-rose-400" />
+                <span>Buka Peta Zona Prioritas</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        <Link to="/peta?mode=priority">
-          <Button variant="primary" size="sm" className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            <span>Lihat Peta Zona Prioritas</span>
-          </Button>
-        </Link>
-      </div>
-
-      {/* 2. Methodology Alert Box */}
-      <div className="my-8 p-4 bg-amber-50 rounded-[8px] border border-amber-200 flex items-start gap-3 text-xs text-amber-900 leading-relaxed">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <strong className="block text-sm font-semibold mb-1">
-            Metodologi Pemeringkatan Ilmiah
-          </strong>
-          Skor Prioritas dihitung dengan formula pembobotan spasial: <br />
-          <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-amber-950">
-            Skor = (Bahaya Kekeringan × 40%) + (Kepadatan Penduduk & Lahan × 35%) + (Jarak Akses Sumber Air × 25%)
-          </code>
-          . Hal ini memastikan distribusi bantuan logistik tangki air bersih dan dana alokasi desa tepat sasaran tanpa perkiraan subjektif.
-        </div>
-      </div>
-
-      {/* 3. Ranked Areas List */}
-      <div className="space-y-6">
-        {priorityList.map((area) => (
-          <Card key={area.rank} className="p-6 md:p-8 hover:border-gray-300">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-[#E8EAED] pb-5">
-              <div className="flex items-center gap-4">
-                <div
-                  className={`w-12 h-12 rounded-[8px] flex items-center justify-center font-bold text-lg text-white shadow-sm shrink-0 ${
-                    area.rank === 1
-                      ? 'bg-[#DC2626]'
-                      : area.rank === 2
-                      ? 'bg-[#F97316]'
-                      : 'bg-[#EAB308]'
-                  }`}
-                >
-                  #{area.rank}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${
-                        area.urgencyLevel === 'Sangat Mendesak'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : area.urgencyLevel === 'Prioritas Tinggi'
-                          ? 'bg-orange-50 text-orange-700 border-orange-200'
-                          : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                      }`}
-                    >
-                      {area.urgencyLevel}
-                    </span>
-                    <span className="text-xs text-[#6F747C]">{area.dusun} ({area.rtRw})</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-[#151A22] mt-1">
-                    {area.areaName}
-                  </h3>
-                </div>
+        {/* 2. Apple Formula Methodology Banner */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200/90 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                <Award className="w-6 h-6" />
               </div>
-
-              {/* Composite Score Pill */}
-              <div className="flex items-center gap-4 text-right">
-                <div>
-                  <span className="text-xs text-[#6F747C] block">Indeks Kerentanan</span>
-                  <span className="text-2xl font-bold text-[#151A22] block font-mono">
-                    {area.compositeScore} / 100
+              <div>
+                <h3 className="text-lg font-bold text-amber-950">
+                  Metodologi Pembobotan Ilmiah Spasial
+                </h3>
+                <p className="text-sm sm:text-base text-amber-900/90 mt-1 leading-relaxed">
+                  Skor dihitung tanpa perkiraan subjektif menggunakan 3 bobot kriteria utama:
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className="px-3 py-1 rounded-xl bg-white/80 border border-amber-300 text-amber-950 text-xs sm:text-sm font-semibold">
+                    Bahaya Kekeringan Geodesi: <strong className="text-amber-800">40%</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-xl bg-white/80 border border-amber-300 text-amber-950 text-xs sm:text-sm font-semibold">
+                    Kepadatan Warga & Lahan: <strong className="text-amber-800">35%</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-xl bg-white/80 border border-amber-300 text-amber-950 text-xs sm:text-sm font-semibold">
+                    Jarak Akses ke Air: <strong className="text-amber-800">25%</strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Details & stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6 text-xs">
-              <div className="p-3.5 bg-gray-50 rounded-[6px] border border-[#E8EAED]">
-                <span className="text-[#6F747C] block mb-1">Masyarakat Terdampak:</span>
-                <span className="text-base font-bold text-[#151A22]">
-                  {area.affectedResidents} Jiwa
-                </span>
-                <span className="text-[11px] text-[#6F747C] block mt-0.5">
-                  Lahan Kritis: {area.farmAreaHa} Hektar
-                </span>
-              </div>
-
-              <div className="p-3.5 bg-gray-50 rounded-[6px] border border-[#E8EAED]">
-                <span className="text-[#6F747C] block mb-1">Sumber Air Terdekat:</span>
-                <span className="text-base font-bold text-[#2563EB]">
-                  {area.nearestWaterSource}
-                </span>
-                <span className="text-[11px] text-[#6F747C] block mt-0.5 font-medium">
-                  Jarak Tempuh: ±{area.distanceToWaterMeters} meter
-                </span>
-              </div>
-
-              <div className="p-3.5 bg-gray-50 rounded-[6px] border border-[#E8EAED]">
-                <span className="text-[#6F747C] block mb-1">Status Kebutuhan:</span>
-                <span className="text-sm font-semibold text-[#DC2626]">
-                  Bantuan Mendesak Diperlukan
-                </span>
-                <span className="text-[11px] text-[#6F747C] block mt-0.5">
-                  Dalam 7 hari ke depan
-                </span>
-              </div>
+            <div className="shrink-0">
+              <Link to="/edukasi">
+                <Button variant="secondary" size="md" className="gap-2 text-amber-950 border-amber-300 bg-white hover:bg-amber-50 font-semibold">
+                  <span>Lihat SOP Distribusi</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
+          </div>
+        </div>
 
-            {/* Problem Description */}
-            <div className="mb-6">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#151A22] mb-1">
-                Akar Permasalahan di Lapangan:
-              </h4>
-              <p className="text-sm text-[#6F747C] leading-relaxed">
-                {area.primaryIssue}
-              </p>
-            </div>
+        {/* 3. Ranked Priority Areas */}
+        <div className="space-y-6">
+          {priorityList.map((area) => {
+            const isRank1 = area.rank === 1;
+            const isRank2 = area.rank === 2;
 
-            {/* Recommended Interventions Checklist */}
-            <div className="p-4 bg-white rounded-[6px] border border-[#E8EAED]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#16A34A] mb-3 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Rekomendasi Rencana Aksi Perangkat Desa & Relawan KKN:</span>
-              </h4>
-              <ul className="space-y-2 text-xs text-[#151A22]">
-                {area.recommendedIntervention.map((action, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] mt-1.5 shrink-0" />
-                    <span>{action}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Card>
-        ))}
+            return (
+              <div
+                key={area.rank}
+                className={`bg-white rounded-2xl border p-6 sm:p-8 transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_8px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] ${
+                  isRank1
+                    ? 'border-rose-300 ring-1 ring-rose-200'
+                    : isRank2
+                    ? 'border-orange-200'
+                    : 'border-slate-200/80'
+                }`}
+              >
+                {/* Header Row: Rank Badge, Title, Urgency Score */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                  <div className="flex items-start sm:items-center gap-4">
+                    <div
+                      className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-extrabold text-lg shrink-0 shadow-xs ${
+                        isRank1
+                          ? 'bg-rose-600 text-white'
+                          : isRank2
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-slate-800 text-white'
+                      }`}
+                    >
+                      <span className="text-[10px] uppercase tracking-wider font-semibold opacity-80">Rank</span>
+                      <span>#{area.rank}</span>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                            area.urgencyLevel === 'Sangat Mendesak'
+                              ? 'bg-rose-50 text-rose-800 border-rose-200 font-bold'
+                              : area.urgencyLevel === 'Prioritas Tinggi'
+                              ? 'bg-orange-50 text-orange-800 border-orange-200 font-bold'
+                              : 'bg-amber-50 text-amber-800 border-amber-200 font-bold'
+                          }`}
+                        >
+                          {area.urgencyLevel}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">• {area.rtRw}</span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
+                        {area.areaName}
+                      </h2>
+                      <p className="text-sm font-medium text-slate-500">{area.dusun}</p>
+                    </div>
+                  </div>
+
+                  {/* Urgency Score Progress Bar */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 min-w-[240px]">
+                    <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                      <span className="text-slate-600">SKOR URGENSI:</span>
+                      <span className="text-base font-extrabold text-slate-900">
+                        {area.compositeScore} <span className="text-xs font-normal text-slate-400">/ 100</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          area.compositeScore > 90
+                            ? 'bg-rose-600'
+                            : area.compositeScore > 80
+                            ? 'bg-orange-500'
+                            : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${area.compositeScore}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Body Content */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6">
+                  {/* Left Column: Problem & Metrics */}
+                  <div className="lg:col-span-6 space-y-4">
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Kondisi Lapangan Terkini
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-800 font-normal leading-relaxed mt-1">
+                        {area.primaryIssue}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50/80 rounded-xl border border-slate-100 text-sm">
+                      <div>
+                        <span className="text-xs font-medium text-slate-500 block">Warga Terdampak</span>
+                        <span className="text-xl font-bold text-slate-900 mt-0.5 block">
+                          {area.affectedResidents} <span className="text-xs font-normal text-slate-500">Jiwa</span>
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-slate-500 block">Lahan Terdampak</span>
+                        <span className="text-xl font-bold text-slate-900 mt-0.5 block">
+                          {area.farmAreaHa} <span className="text-xs font-normal text-slate-500">Hektar</span>
+                        </span>
+                      </div>
+                      <div className="col-span-2 pt-2 border-t border-slate-200/60">
+                        <span className="text-xs font-medium text-slate-500 block">Akses Sumber Air Terdekat</span>
+                        <span className="font-semibold text-slate-900">
+                          {area.nearestWaterSource} ({area.distanceToWaterMeters} meter)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Recommended Action Checklist */}
+                  <div className="lg:col-span-6 space-y-3">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Rencana Tindakan Darurat & Teknis
+                    </h3>
+                    <div className="space-y-2.5">
+                      {area.recommendedIntervention.map((step, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/80 border border-slate-100 text-sm text-slate-800"
+                        >
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                          <span className="leading-snug">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-2 flex flex-wrap items-center gap-3">
+                      <Link to={`/peta?mode=priority`}>
+                        <Button variant="secondary" size="md" className="gap-2 font-semibold">
+                          <MapPin className="w-4 h-4 text-slate-600" />
+                          <span>Buka Lokasi di Peta</span>
+                        </Button>
+                      </Link>
+
+                      {isRank1 && (
+                        <Link to="/laporan">
+                          <Button variant="danger" size="md" className="gap-2 font-semibold">
+                            <Truck className="w-4 h-4" />
+                            <span>Permintaan Tangki Air</span>
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

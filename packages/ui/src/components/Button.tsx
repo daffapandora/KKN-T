@@ -22,24 +22,30 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none rounded-[6px] border text-sm';
+      'inline-flex items-center justify-center font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#16A34A] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none rounded-xl border select-none active:scale-[0.98]';
 
     const sizeStyles = {
-      sm: 'h-8 px-3 text-xs gap-1.5',
-      md: 'h-10 px-4 text-sm gap-2',
-      lg: 'h-11 px-5 text-base gap-2.5',
+      sm: 'h-9 px-3.5 text-xs font-semibold gap-1.5',
+      md: 'h-11 px-5 text-sm font-semibold gap-2 min-h-[44px]',
+      lg: 'h-13 px-6 text-base font-semibold gap-2.5 min-h-[52px]',
     };
 
     const variantStyles = {
-      // Dark primary button (#17202B) from Section 9.2 reference
-      primary: 'bg-[#17202B] text-white border-[#17202B] hover:bg-[#232F3E]',
-      // Functional brand green accent
-      brand: 'bg-[#16A34A] text-white border-[#16A34A] hover:bg-[#15803D]',
-      // Hairline bordered secondary
-      secondary: 'bg-white text-[#151A22] border-[#E8EAED] hover:bg-gray-50',
-      outline: 'bg-transparent text-[#151A22] border-[#E8EAED] hover:bg-gray-50',
-      ghost: 'bg-transparent text-[#151A22] border-transparent hover:bg-gray-100',
-      danger: 'bg-[#DC2626] text-white border-[#DC2626] hover:bg-[#B91C1C]',
+      // Apple Dark Slate primary
+      primary:
+        'bg-[#0F172A] text-white border-transparent hover:bg-[#1E293B] active:bg-[#020617] shadow-sm',
+      // Natural Emerald Green brand accent
+      brand:
+        'bg-[#16A34A] text-white border-transparent hover:bg-[#15803D] active:bg-[#14532D] shadow-[0_2px_8px_rgba(22,163,74,0.25)]',
+      // Apple frosted/bordered secondary
+      secondary:
+        'bg-white text-[#0F172A] border-slate-200/90 hover:bg-slate-50 hover:border-slate-300 shadow-xs active:bg-slate-100',
+      outline:
+        'bg-transparent text-[#0F172A] border-slate-300 hover:bg-slate-50 active:bg-slate-100',
+      ghost:
+        'bg-transparent text-[#0F172A] border-transparent hover:bg-slate-100/80 active:bg-slate-200/60',
+      danger:
+        'bg-[#DC2626] text-white border-transparent hover:bg-[#B91C1C] active:bg-[#991B1B] shadow-[0_2px_8px_rgba(220,38,38,0.2)]',
     };
 
     return (

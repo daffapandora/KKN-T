@@ -21,6 +21,13 @@ import {
   Maximize2,
   Check,
   Compass,
+  Crosshair,
+  Sliders,
+  X,
+  Plus,
+  Minus,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 
 // Import Authentic GeoJSON Datasets
@@ -64,7 +71,7 @@ export const MapPage: React.FC = () => {
       active: true,
       opacity: 0.7,
       color: '#F97316',
-      description: 'Hasil integrasi curah hujan BMKG, indeks vegetasi NDVI, kelerengan, dan pola aliran.',
+      description: 'Zonasi bahaya kelerengan, indeks vegetasi NDVI, dan curah hujan.',
     },
     {
       id: '2',
@@ -74,7 +81,7 @@ export const MapPage: React.FC = () => {
       active: activeModeParam.includes('risiko') || activeModeParam === 'risk',
       opacity: 0.65,
       color: '#DC2626',
-      description: 'Matriks bahaya dikalikan keterpaparan penduduk & lahan sawah.',
+      description: 'Analisis risiko gabungan terhadap rumah tangga & lahan tani kritis.',
     },
     {
       id: '3',
@@ -84,7 +91,7 @@ export const MapPage: React.FC = () => {
       active: true,
       opacity: 1,
       color: '#2563EB',
-      description: 'Inventarisasi mata air pegunungan, sumur bor sentral, dan debit kemarau.',
+      description: 'Inventarisasi mata air pegunungan, sumur bor, & kapasitas tandon.',
     },
     {
       id: '4',
@@ -94,7 +101,7 @@ export const MapPage: React.FC = () => {
       active: activeModeParam.includes('partisipatif') || activeModeParam === 'participatory',
       opacity: 0.85,
       color: '#7C3AED',
-      description: 'Jalur pipa swadaya, bak penampung warga, dan sawah kritis terverifikasi.',
+      description: 'Jalur pipa swadaya masyarakat, titik retakan, & sawah terdampak.',
     },
     {
       id: '5',
@@ -103,8 +110,8 @@ export const MapPage: React.FC = () => {
       category: 'base',
       active: true,
       opacity: 0.9,
-      color: '#151A22',
-      description: 'Batas desa dan 4 dusun (Kemitir Lor, Kemitir Kidul, Garon, Kalitengah).',
+      color: '#0F172A',
+      description: 'Batas resmi desa & 4 dusun (Kemitir Lor, Kidul, Garon, Kalitengah).',
     },
     {
       id: '6',
@@ -114,7 +121,7 @@ export const MapPage: React.FC = () => {
       active: activeModeParam.includes('prioritas') || activeModeParam === 'priority',
       opacity: 0.8,
       color: '#B91C1C',
-      description: 'Zona tanggap darurat dropping air dan perbaikan pipa paralon.',
+      description: 'Zona tanggap darurat dropping tangki air & bantuan pompa pipa.',
     },
   ]);
 
@@ -479,7 +486,7 @@ export const MapPage: React.FC = () => {
         source: 'src-participatory',
         filter: ['==', '$type', 'Point'],
         paint: {
-          'circle-radius': 8,
+          'circle-radius': 9,
           'circle-color': '#EC4899',
           'circle-stroke-width': 2.5,
           'circle-stroke-color': '#FFFFFF',
@@ -595,9 +602,6 @@ export const MapPage: React.FC = () => {
         zoom: 14,
       });
 
-      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
-      map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
-
       map.on('load', () => {
         setupVectorLayers(map);
         syncMapLayers(map, layers);
@@ -610,11 +614,12 @@ export const MapPage: React.FC = () => {
       // Add markers for water sources
       waterSourcePins.forEach((feat) => {
         const el = document.createElement('div');
-        el.className = 'w-7 h-7 rounded-full border-2 border-white flex items-center justify-center cursor-pointer shadow-lg transition-transform hover:scale-125 z-10';
+        el.className =
+          'w-8 h-8 rounded-full border-[2.5px] border-white flex items-center justify-center cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.25)] transition-all duration-200 hover:scale-125 z-10';
         el.style.backgroundColor = feat.color;
 
         const innerDot = document.createElement('div');
-        innerDot.className = 'w-2.5 h-2.5 rounded-full bg-white';
+        innerDot.className = 'w-3 h-3 rounded-full bg-white shadow-xs';
         el.appendChild(innerDot);
 
         el.addEventListener('click', (ev) => {
@@ -723,143 +728,203 @@ export const MapPage: React.FC = () => {
     );
   };
 
+  const resetMapCenter = () => {
+    if (mapInstance.current) {
+      mapInstance.current.flyTo({
+        center: [110.3155, -7.2285],
+        zoom: 14,
+        pitch: 0,
+        bearing: 0,
+        duration: 900,
+      });
+    }
+  };
+
+  const zoomIn = () => {
+    if (mapInstance.current) {
+      mapInstance.current.zoomIn();
+    }
+  };
+
+  const zoomOut = () => {
+    if (mapInstance.current) {
+      mapInstance.current.zoomOut();
+    }
+  };
+
+  const handleGeolocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (mapInstance.current) {
+            mapInstance.current.flyTo({
+              center: [pos.coords.longitude, pos.coords.latitude],
+              zoom: 16,
+              duration: 1000,
+            });
+          }
+        },
+        (err) => {
+          alert('Izin lokasi tidak diberikan atau perangkat di luar jangkauan GPS.');
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+  };
+
   const openInGoogleMaps = (lng: number, lat: number) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem)] flex flex-col md:flex-row overflow-hidden bg-slate-100">
-      {/* 1. Dark App Shell Left Sidebar (Desktop) */}
-      <aside className="w-16 bg-[#17202B] border-r border-[#232F3E] hidden md:flex flex-col items-center py-4 justify-between z-20 shrink-0">
+    <div className="relative w-full h-[calc(100vh-4.5rem)] flex flex-col md:flex-row overflow-hidden bg-slate-900">
+      {/* 1. Sleek Apple Left Command Dock (Desktop) */}
+      <aside className="w-18 bg-[#0F172A]/90 backdrop-blur-xl border-r border-slate-800/90 hidden md:flex flex-col items-center py-5 justify-between z-20 shrink-0 select-none">
         <div className="space-y-4 flex flex-col items-center">
-          <div className="w-10 h-10 rounded-[6px] bg-[#16A34A] flex items-center justify-center text-white shadow-sm">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#16A34A] to-[#15803D] flex items-center justify-center text-white shadow-[0_2px_10px_rgba(22,163,74,0.35)]">
             <Layers className="w-5 h-5" />
           </div>
 
+          <div className="w-8 h-[1px] bg-slate-800 my-1" />
+
           <button
             onClick={() => setThematicFilter('all')}
-            className={`p-2.5 rounded-[6px] transition-all ${
-              activeModeParam === 'all' ? 'bg-[#16A34A] text-white shadow-md' : 'text-slate-400 hover:text-white'
+            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+              activeModeParam === 'all'
+                ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
             title="Semua Layer"
           >
-            <Layers2 className="w-4 h-4" />
+            <Layers2 className="w-5 h-5" />
           </button>
 
           <button
             onClick={() => setThematicFilter('hazard')}
-            className={`p-2.5 rounded-[6px] transition-all ${
+            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
               activeModeParam === 'hazard' || activeModeParam === 'bahaya-kekeringan'
-                ? 'bg-[#F97316] text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#F97316] text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
             title="Peta Bahaya Kekeringan"
           >
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-5 h-5" />
           </button>
 
           <button
             onClick={() => setThematicFilter('risk')}
-            className={`p-2.5 rounded-[6px] transition-all ${
+            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
               activeModeParam === 'risk' || activeModeParam === 'risiko-kekeringan'
-                ? 'bg-[#DC2626] text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#DC2626] text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
             title="Peta Risiko Kekeringan"
           >
-            <Compass className="w-4 h-4" />
+            <Compass className="w-5 h-5" />
           </button>
 
           <button
             onClick={() => setThematicFilter('water')}
-            className={`p-2.5 rounded-[6px] transition-all ${
+            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
               activeModeParam === 'water' || activeModeParam === 'sumber-air'
-                ? 'bg-[#2563EB] text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#2563EB] text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
             title="Titik Sumber Air Bersih"
           >
-            <Droplets className="w-4 h-4" />
+            <Droplets className="w-5 h-5" />
           </button>
 
           <button
             onClick={() => setThematicFilter('participatory')}
-            className={`p-2.5 rounded-[6px] transition-all ${
+            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
               activeModeParam === 'participatory' || activeModeParam === 'peta-partisipatif'
-                ? 'bg-[#7C3AED] text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#7C3AED] text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
             title="Peta Partisipatif Warga"
           >
-            <Activity className="w-4 h-4" />
+            <Activity className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center">
-          GIS
+        <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider text-center">
+          KEMITIR
         </div>
       </aside>
 
-      {/* 2. Top Thematic Switcher Ribbon (Mobile & Desktop) */}
-      <div className="absolute top-3 left-4 md:left-20 right-4 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-        {/* Left: Search Bar & Thematic Tabs */}
-        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
-          <div className="bg-white rounded-[6px] border border-[#E8EAED] px-3 py-1.5 flex items-center gap-2 shadow-sm w-60 md:w-72">
-            <Search className="w-3.5 h-3.5 text-[#6F747C]" />
+      {/* 2. Apple Top Floating Control Ribbon */}
+      <div className="absolute top-4 left-4 md:left-22 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+        {/* Left: Search Bar & Segmented Control */}
+        <div className="flex flex-wrap items-center gap-2.5 pointer-events-auto">
+          {/* Search Box */}
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200/90 px-3.5 h-11 flex items-center gap-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] w-64 md:w-72 transition-all focus-within:ring-2 focus-within:ring-emerald-500">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari sumber air, RT/RW, pipa..."
-              className="w-full text-xs text-[#151A22] placeholder:text-[#6F747C] focus:outline-none"
+              placeholder="Cari mata air, dusun, pipa..."
+              className="w-full text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-slate-400 hover:text-slate-600 p-0.5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center bg-white rounded-[6px] border border-[#E8EAED] p-1 shadow-sm gap-1 text-xs font-medium">
+          {/* Apple Segmented Control for Thematic Layers */}
+          <div className="hidden lg:flex items-center bg-slate-200/75 backdrop-blur-xl rounded-2xl p-1 shadow-inner gap-1 text-sm font-semibold select-none">
             <button
               onClick={() => setThematicFilter('all')}
-              className={`px-3 py-1 rounded-[4px] transition-colors ${
-                activeModeParam === 'all' ? 'bg-[#17202B] text-white shadow-xs' : 'text-[#6F747C] hover:text-[#151A22]'
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
+                activeModeParam === 'all'
+                  ? 'bg-white text-slate-900 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Semua
             </button>
             <button
               onClick={() => setThematicFilter('hazard')}
-              className={`px-3 py-1 rounded-[4px] transition-colors ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeModeParam === 'hazard' || activeModeParam === 'bahaya-kekeringan'
-                  ? 'bg-[#F97316] text-white shadow-xs font-semibold'
-                  : 'text-[#6F747C] hover:text-[#151A22]'
+                  ? 'bg-white text-orange-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Bahaya
             </button>
             <button
               onClick={() => setThematicFilter('risk')}
-              className={`px-3 py-1 rounded-[4px] transition-colors ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeModeParam === 'risk' || activeModeParam === 'risiko-kekeringan'
-                  ? 'bg-[#DC2626] text-white shadow-xs font-semibold'
-                  : 'text-[#6F747C] hover:text-[#151A22]'
+                  ? 'bg-white text-red-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Risiko
             </button>
             <button
               onClick={() => setThematicFilter('water')}
-              className={`px-3 py-1 rounded-[4px] transition-colors ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeModeParam === 'water' || activeModeParam === 'sumber-air'
-                  ? 'bg-[#2563EB] text-white shadow-xs font-semibold'
-                  : 'text-[#6F747C] hover:text-[#151A22]'
+                  ? 'bg-white text-blue-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Sumber Air
             </button>
             <button
               onClick={() => setThematicFilter('participatory')}
-              className={`px-3 py-1 rounded-[4px] transition-colors ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeModeParam === 'participatory' || activeModeParam === 'peta-partisipatif'
-                  ? 'bg-[#7C3AED] text-white shadow-xs font-semibold'
-                  : 'text-[#6F747C] hover:text-[#151A22]'
+                  ? 'bg-white text-purple-600 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Partisipatif
@@ -868,23 +933,23 @@ export const MapPage: React.FC = () => {
         </div>
 
         {/* Right: Basemap Switcher (Satellite vs Streets) */}
-        <div className="bg-white rounded-[6px] border border-[#E8EAED] p-1 flex items-center gap-1 shadow-sm pointer-events-auto">
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200/90 p-1 flex items-center gap-1 shadow-[0_4px_20px_rgba(0,0,0,0.06)] pointer-events-auto">
           <button
             onClick={() => setBasemap('satellite')}
-            className={`px-2.5 py-1 text-xs rounded-[4px] font-medium transition-colors ${
+            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${
               basemap === 'satellite'
-                ? 'bg-[#16A34A] text-white'
-                : 'text-[#6F747C] hover:text-[#151A22]'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             Citra Satelit {basemap === 'satellite' && '✓'}
           </button>
           <button
             onClick={() => setBasemap('streets')}
-            className={`px-2.5 py-1 text-xs rounded-[4px] font-medium transition-colors ${
+            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${
               basemap === 'streets'
-                ? 'bg-[#16A34A] text-white'
-                : 'text-[#6F747C] hover:text-[#151A22]'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             Peta Jalan (OSM) {basemap === 'streets' && '✓'}
@@ -892,63 +957,85 @@ export const MapPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Layer Manager Panel (Left Overlay) */}
+      {/* 3. Apple-grade Floating Layer Management Sheet */}
       <div
-        className={`absolute top-16 left-4 md:left-20 z-10 w-80 bg-white/95 backdrop-blur-md rounded-[8px] border border-[#E8EAED] shadow-lg transition-all duration-300 max-h-[calc(100vh-8rem)] flex flex-col ${
-          layerPanelOpen ? 'translate-x-0 opacity-100' : '-translate-x-96 opacity-0 pointer-events-none'
+        className={`absolute top-20 left-4 md:left-22 z-10 w-88 bg-white/95 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-[0_10px_35px_-5px_rgba(0,0,0,0.15)] transition-all duration-300 max-h-[calc(100vh-9rem)] flex flex-col ${
+          layerPanelOpen
+            ? 'translate-x-0 opacity-100 pointer-events-auto'
+            : '-translate-x-96 opacity-0 pointer-events-none'
         }`}
       >
-        <div className="p-3.5 border-b border-[#E8EAED] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#16A34A]" />
-            <h2 className="text-xs font-bold text-[#151A22] uppercase tracking-wide">
-              Manajemen Layer
-            </h2>
+        <div className="p-4 border-b border-slate-200/80 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+              <Sliders className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 leading-tight">
+                Manajemen Layer Spasial
+              </h2>
+              <span className="text-[11px] text-slate-500 font-medium">
+                Kontrol visual peta tematik
+              </span>
+            </div>
           </div>
-          <span className="text-[10px] text-[#6F747C] bg-gray-100 px-2 py-0.5 rounded font-mono">
+          <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
             EPSG:4326
           </span>
         </div>
 
-        <div className="p-3 space-y-3 overflow-y-auto flex-1 text-xs">
+        {/* Scrollable Layer Switches */}
+        <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1">
           {layers.map((layer) => (
             <div
               key={layer.id}
-              className={`p-2.5 rounded-[6px] border transition-colors ${
-                layer.active ? 'bg-white border-[#E8EAED] shadow-xs' : 'bg-gray-50/70 border-transparent opacity-60'
+              className={`p-3 rounded-2xl border transition-all ${
+                layer.active
+                  ? 'bg-white border-slate-200/90 shadow-sm'
+                  : 'bg-slate-50/60 border-transparent opacity-65'
               }`}
             >
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={layer.active}
-                    onChange={() => toggleLayer(layer.slug)}
-                    className="w-3.5 h-3.5 rounded text-[#16A34A] focus:ring-[#16A34A]"
-                  />
+                <div className="flex items-center gap-2.5">
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
                     style={{ backgroundColor: layer.color }}
                   />
-                  <span className="font-semibold text-[#151A22] text-[11px] leading-tight">
-                    {layer.title}
-                  </span>
-                </label>
+                  <div>
+                    <span className="font-bold text-slate-900 text-sm block leading-snug">
+                      {layer.title}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block leading-tight">
+                      {layer.description}
+                    </span>
+                  </div>
+                </div>
 
+                {/* Apple iOS Toggle Switch */}
                 <button
+                  type="button"
                   onClick={() => toggleLayer(layer.slug)}
-                  className="text-[#6F747C] hover:text-[#151A22] p-0.5"
-                  title={layer.active ? 'Sembunyikan' : 'Tampilkan'}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                    layer.active ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}
+                  aria-pressed={layer.active}
                 >
-                  {layer.active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      layer.active ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
                 </button>
               </div>
 
+              {/* Opacity slider with tactile Apple feel */}
               {layer.active && (
-                <div className="mt-2.5 space-y-1.5 pl-6 border-l-2 border-gray-100">
-                  <div className="flex items-center justify-between text-[10px] text-[#6F747C]">
-                    <span>Opasitas Layer</span>
-                    <span>{Math.round(layer.opacity * 100)}%</span>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
+                    <span>Transparansi / Opasitas</span>
+                    <span className="font-bold text-slate-900">
+                      {Math.round(layer.opacity * 100)}%
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -957,11 +1044,8 @@ export const MapPage: React.FC = () => {
                     step="0.05"
                     value={layer.opacity}
                     onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
-                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#16A34A]"
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
-                  <p className="text-[10px] text-[#6F747C] italic leading-tight">
-                    {layer.description}
-                  </p>
                 </div>
               )}
             </div>
@@ -969,67 +1053,107 @@ export const MapPage: React.FC = () => {
         </div>
 
         {/* Legend Footer */}
-        <div className="p-3 border-t border-[#E8EAED] bg-gray-50/80 rounded-b-[8px]">
-          <span className="text-[10px] font-bold text-[#6F747C] uppercase block mb-1.5">
-            Legenda Bahaya / Risiko
+        <div className="p-3.5 border-t border-slate-200/80 bg-slate-50/80 rounded-b-3xl">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+            Legenda Zona Bahaya / Risiko
           </span>
-          <div className="grid grid-cols-2 gap-1.5 text-[10px] text-[#151A22]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-[#22C55E]" />
-              <span>Rendah</span>
+          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#22C55E]" />
+              <span>Rendah (Aman)</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-[#EAB308]" />
-              <span>Sedang</span>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#EAB308]" />
+              <span>Sedang (Waspada)</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-[#F97316]" />
-              <span>Tinggi</span>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#F97316]" />
+              <span>Tinggi (Siaga)</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-[#EF4444]" />
-              <span>Sangat Tinggi</span>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#EF4444]" />
+              <span>Sangat Tinggi (Darurat)</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Layer Panel Toggle Button (Floating) */}
-      <button
-        onClick={() => setLayerPanelOpen(!layerPanelOpen)}
-        className="absolute bottom-5 left-4 md:left-20 z-10 bg-white border border-[#E8EAED] text-[#151A22] rounded-[6px] px-3 py-1.5 shadow-md flex items-center gap-1.5 text-xs font-semibold hover:bg-gray-50"
-      >
-        <Layers className="w-3.5 h-3.5 text-[#16A34A]" />
-        <span>{layerPanelOpen ? 'Sembunyikan Panel' : 'Panel Layer'}</span>
-      </button>
+      {/* Floating Panel Toggle & Quick Controls (Bottom Left) */}
+      <div className="absolute bottom-6 left-4 md:left-22 z-10 flex items-center gap-2.5 select-none">
+        <button
+          onClick={() => setLayerPanelOpen(!layerPanelOpen)}
+          className="bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-900 rounded-2xl px-4 py-2.5 shadow-lg flex items-center gap-2 text-xs font-bold hover:bg-slate-50 active:scale-95 transition-all"
+        >
+          <Sliders className="w-4 h-4 text-emerald-600" />
+          <span>{layerPanelOpen ? 'Tutup Panel' : 'Panel Layer'}</span>
+        </button>
+
+        <button
+          onClick={resetMapCenter}
+          className="bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-900 rounded-2xl px-3.5 py-2.5 shadow-lg flex items-center gap-1.5 text-xs font-bold hover:bg-slate-50 active:scale-95 transition-all"
+          title="Pusatkan Peta ke Desa Kemitir"
+        >
+          <Compass className="w-4 h-4 text-slate-700" />
+          <span className="hidden sm:inline">Pusat Desa</span>
+        </button>
+
+        <button
+          onClick={handleGeolocation}
+          className="bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-900 rounded-2xl px-3.5 py-2.5 shadow-lg flex items-center gap-1.5 text-xs font-bold hover:bg-slate-50 active:scale-95 transition-all"
+          title="Temukan Lokasi Saya"
+        >
+          <Crosshair className="w-4 h-4 text-blue-600" />
+          <span className="hidden sm:inline">Lokasi Saya</span>
+        </button>
+      </div>
+
+      {/* Floating Zoom Controls (Bottom Right) */}
+      <div className="absolute bottom-6 right-6 z-10 hidden sm:flex flex-col gap-1.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-lg p-1">
+        <button
+          onClick={zoomIn}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-90 transition-all"
+          title="Perbesar"
+        >
+          <Plus className="w-5 h-5" />
+        </button>
+        <div className="w-full h-[1px] bg-slate-200" />
+        <button
+          onClick={zoomOut}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-90 transition-all"
+          title="Perkecil"
+        >
+          <Minus className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* 4. Map Canvas Container */}
       <div ref={mapContainer} className="w-full h-full relative" />
 
-      {/* 5. Right Feature Inspection Drawer */}
+      {/* 5. Apple Right Inspection Sheet (When clicking polygon, line, or pin) */}
       {selectedFeature && (
-        <div className="absolute top-16 right-4 z-10 w-80 md:w-96 bg-white/95 backdrop-blur-md rounded-[8px] border border-[#E8EAED] shadow-xl p-4 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
-          <div className="flex items-start justify-between border-b border-[#E8EAED] pb-3">
+        <div className="absolute top-20 right-4 z-10 w-90 md:w-96 bg-white/95 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-[0_15px_40px_-5px_rgba(0,0,0,0.2)] p-6 space-y-4 max-h-[calc(100vh-9rem)] overflow-y-auto animate-in slide-in-from-right-4 duration-200">
+          <div className="flex items-start justify-between border-b border-slate-200/80 pb-3.5">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#16A34A] block">
-                {selectedFeature.type}
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80 mb-1.5">
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>{selectedFeature.type}</span>
               </span>
-              <h3 className="text-sm font-bold text-[#151A22] leading-snug">
+              <h3 className="text-lg font-bold text-slate-900 leading-snug">
                 {selectedFeature.title}
               </h3>
             </div>
             <button
               onClick={() => setSelectedFeature(null)}
-              className="text-[#6F747C] hover:text-[#151A22] p-1"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               aria-label="Tutup Detail"
             >
-              ✕
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-[#6F747C]">Status Operasional</span>
+          <div className="space-y-3.5 text-sm">
+            <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
+              <span className="text-xs text-slate-500 font-medium">Status Operasional</span>
               <StatusChip
                 label={selectedFeature.status}
                 status={selectedFeature.status.includes('Aktif') ? 'valid' : 'pending'}
@@ -1037,48 +1161,54 @@ export const MapPage: React.FC = () => {
             </div>
 
             {selectedFeature.hazardClass && (
-              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                <span className="text-[#6F747C]">Tingkat Kerawanan</span>
-                <span className={`font-bold ${
-                  selectedFeature.hazardClass === 'Rendah'
-                    ? 'text-green-600'
-                    : selectedFeature.hazardClass === 'Sedang'
-                    ? 'text-yellow-600'
-                    : 'text-red-600'
-                }`}>
+              <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
+                <span className="text-xs text-slate-500 font-medium">Tingkat Kerawanan</span>
+                <span
+                  className={`font-bold text-xs uppercase px-2.5 py-1 rounded-full ${
+                    selectedFeature.hazardClass === 'Rendah'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : selectedFeature.hazardClass === 'Sedang'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}
+                >
                   {selectedFeature.hazardClass}
                 </span>
               </div>
             )}
 
             {selectedFeature.debit && (
-              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                <span className="text-[#6F747C]">Kapasitas / Debit</span>
-                <span className="font-semibold text-[#151A22]">{selectedFeature.debit}</span>
+              <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
+                <span className="text-xs text-slate-500 font-medium">Kapasitas / Debit Air</span>
+                <span className="font-bold text-slate-900">{selectedFeature.debit}</span>
               </div>
             )}
 
             <div>
-              <span className="text-[#6F747C] font-semibold block mb-1">Lokasi Administrasi</span>
-              <div className="flex items-center gap-1.5 text-[#151A22]">
-                <MapPin className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+              <span className="text-xs text-slate-500 font-semibold block mb-1">
+                Lokasi Wilayah
+              </span>
+              <div className="flex items-center gap-2 text-slate-900 font-medium">
+                <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{selectedFeature.dusun}</span>
               </div>
             </div>
 
             <div>
-              <span className="text-[#6F747C] font-semibold block mb-1">Deskripsi Kondisi</span>
-              <p className="text-[#4A4F56] leading-relaxed bg-gray-50 p-2.5 rounded border border-gray-100">
+              <span className="text-xs text-slate-500 font-semibold block mb-1">
+                Informasi & Analisis Bencana
+              </span>
+              <p className="text-slate-700 leading-relaxed bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100 text-xs font-normal">
                 {selectedFeature.description}
               </p>
             </div>
 
             {selectedFeature.coordinates && (
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2">
                 <Button
-                  variant="primary"
-                  size="sm"
-                  className="flex-1 flex items-center justify-center gap-1"
+                  variant="brand"
+                  size="md"
+                  className="w-full gap-2 font-semibold shadow-md"
                   onClick={() =>
                     openInGoogleMaps(
                       selectedFeature.coordinates![0],
@@ -1086,8 +1216,8 @@ export const MapPage: React.FC = () => {
                     )
                   }
                 >
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span>Rute Google Maps</span>
+                  <Navigation className="w-4 h-4" />
+                  <span>Buka Rute Navigasi Google Maps</span>
                 </Button>
               </div>
             )}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Button, StatusChip } from '@kemitir/ui';
-import { BookOpen, Droplets, ShieldCheck, PhoneCall, AlertTriangle, ChevronRight, CheckCircle2, FileText, ArrowRight } from 'lucide-react';
+import { Card, Button } from '@kemitir/ui';
+import { BookOpen, Droplets, ShieldCheck, PhoneCall, AlertTriangle, ChevronRight, CheckCircle2, FileText, ArrowRight, Phone, Sparkles, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Article {
@@ -81,153 +81,206 @@ export const EducationPage: React.FC = () => {
     },
   ];
 
-  const filteredArticles = selectedCategory === 'all'
-    ? articles
-    : articles.filter((a) => a.category === selectedCategory);
+  const categories = [
+    { id: 'all', label: 'Semua Panduan' },
+    { id: 'Konservasi Air', label: 'Konservasi Air' },
+    { id: 'SOP Darurat', label: 'SOP Bantuan Tangki' },
+    { id: 'Pertanian', label: 'Pertanian Hemat Air' },
+    { id: 'Mitigasi', label: 'Mitigasi Mata Air' },
+  ];
+
+  const filteredArticles =
+    selectedCategory === 'all'
+      ? articles
+      : articles.filter((a) => a.category === selectedCategory);
 
   return (
-    <div className="flex-1 bg-[#F9FAFB] py-8">
+    <div className="flex-1 bg-slate-50/60 py-10">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
-        {/* Header Banner */}
-        <div className="bg-gradient-to-r from-[#15803D] to-[#16A34A] rounded-xl p-8 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-sm">
+        {/* Apple Header Banner */}
+        <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-700 rounded-3xl p-8 sm:p-10 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-bold tracking-wide uppercase backdrop-blur-md">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Pusat Literasi Kebencanaan Desa</span>
+              <span>Pusat Literasi & Tanggap Bencana Desa</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
               Edukasi & Mitigasi Kekeringan Kemitir
             </h1>
-            <p className="text-white/90 text-sm leading-relaxed">
-              Panduan praktis konservasi air, alur bantuan tangki darurat, serta strategi perlindungan mata air pegunungan untuk seluruh warga dan perangkat desa.
+            <p className="text-white/90 text-base sm:text-lg leading-relaxed">
+              Panduan praktis konservasi air rumah tangga, SOP resmi bantuan tangki BPBD, dan panduan perawatan pipa swadaya untuk warga usia 30-50 tahun.
             </p>
           </div>
-          <Link to="/laporan">
-            <Button variant="secondary" className="bg-white text-[#15803D] hover:bg-white/90 shadow">
-              Lapor Krisis Air
-            </Button>
-          </Link>
+
+          <div className="shrink-0">
+            <Link to="/laporan">
+              <Button variant="secondary" size="lg" className="bg-white text-emerald-800 hover:bg-slate-100 font-bold shadow-md">
+                Lapor Krisis Air
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        {/* Emergency Hotlines Card */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-4 border-l-4 border-l-[#16A34A] flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-[#16A34A]">
-              <PhoneCall className="w-5 h-5" />
+        {/* Emergency Hotlines with Direct Call Ergonomics */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+            Kontak Cepat & Bantuan Darurat
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a
+              href="tel:085876543210"
+              className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-emerald-500 hover:shadow-md transition-all flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 block">Satgas Bencana Desa</span>
+                  <span className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                    0858-7654-3210
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 px-2 py-1 bg-emerald-50 rounded-lg">
+                Panggil
+              </span>
+            </a>
+
+            <a
+              href="tel:112"
+              className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-blue-500 hover:shadow-md transition-all flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                  <Droplets className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 block">Tangki Air BPBD Semarang</span>
+                  <span className="text-base font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                    112 / (024) 692-1413
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-blue-700 px-2 py-1 bg-blue-50 rounded-lg">
+                Panggil
+              </span>
+            </a>
+
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-slate-500 block">Pengaduan Pipa Swadaya</span>
+                <span className="text-sm font-bold text-slate-900">
+                  Hubungi Pengurus RT Setempat
+                </span>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-[#6F747C] font-medium">Satgas Bencana Desa Kemitir</p>
-              <p className="text-sm font-bold text-[#151A22]">0858-7654-3210 (Pak Kadus)</p>
-            </div>
-          </Card>
-          <Card className="p-4 border-l-4 border-l-[#2563EB] flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-[#2563EB]">
-              <Droplets className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-[#6F747C] font-medium">Bantuan Tangki Air BPBD Semarang</p>
-              <p className="text-sm font-bold text-[#151A22]">(024) 692-1413 / 112</p>
-            </div>
-          </Card>
-          <Card className="p-4 border-l-4 border-l-[#F59E0B] flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-[#F59E0B]">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-[#6F747C] font-medium">Pengaduan Pipa Rusak & Swadaya</p>
-              <p className="text-sm font-bold text-[#151A22]">Hubungi Pengurus RT Setempat</p>
-            </div>
-          </Card>
+          </div>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {['all', 'Konservasi Air', 'SOP Darurat', 'Pertanian', 'Mitigasi'].map((cat) => (
+        {/* Category Segmented Controls */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
+          {categories.map((c) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
-                selectedCategory === cat
-                  ? 'bg-[#16A34A] text-white shadow-sm'
-                  : 'bg-white border border-[#E8EAED] text-[#4A4F56] hover:bg-gray-50'
+              key={c.id}
+              onClick={() => setSelectedCategory(c.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all select-none ${
+                selectedCategory === c.id
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {cat === 'all' ? 'Semua Panduan' : cat}
+              {c.label}
             </button>
           ))}
         </div>
 
-        {/* Articles List / Detail */}
-        {activeArticle ? (
-          <Card className="p-6 sm:p-8 space-y-6">
-            <button
-              onClick={() => setActiveArticle(null)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#16A34A] hover:underline"
+        {/* Articles Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredArticles.map((article) => (
+            <div
+              key={article.slug}
+              className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between"
             >
-              ← Kembali ke Daftar Artikel
-            </button>
-            <div className="space-y-3 border-b border-[#E8EAED] pb-6">
-              <div className="flex items-center gap-2">
-                <StatusChip label={activeArticle.category} status="valid" />
-                <span className="text-xs text-[#6F747C]">{activeArticle.readTime}</span>
-                <span className="text-xs text-[#6F747C]">•</span>
-                <span className="text-xs text-[#6F747C]">{activeArticle.date}</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-[#151A22]">
-                {activeArticle.title}
-              </h2>
-              <p className="text-xs text-[#6F747C]">Ditulis oleh: {activeArticle.author}</p>
-            </div>
-            <div className="space-y-4 text-sm text-[#374151] leading-relaxed">
-              {activeArticle.content.map((p, idx) => (
-                <p key={idx} className="bg-gray-50/70 p-4 rounded-lg border border-gray-100">
-                  {p}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-emerald-700 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200">
+                    {article.category}
+                  </span>
+                  <span className="text-slate-500 font-medium">{article.readTime}</span>
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                  {article.title}
+                </h3>
+
+                <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+                  {article.summary}
                 </p>
-              ))}
-            </div>
-            <div className="pt-4 border-t border-[#E8EAED] flex items-center justify-between">
-              <Link to="/peta">
-                <Button variant="secondary" size="sm">
-                  Cek Kondisi Peta Terkini
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="text-xs text-slate-500">
+                  <span className="font-medium text-slate-800 block">{article.author}</span>
+                  <span>{article.date}</span>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="font-semibold gap-1.5"
+                  onClick={() => setActiveArticle(article)}
+                >
+                  <span>Baca Selengkapnya</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
                 </Button>
-              </Link>
-              <button
-                onClick={() => setActiveArticle(null)}
-                className="text-xs font-semibold text-[#16A34A]"
-              >
-                Tutup Artikel
-              </button>
+              </div>
             </div>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredArticles.map((article) => (
-              <Card
-                key={article.slug}
-                className="p-6 flex flex-col justify-between hover:shadow-md transition-shadow group cursor-pointer border border-[#E8EAED]"
-                onClick={() => setActiveArticle(article)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <StatusChip label={article.category} status="valid" />
-                    <span className="text-xs text-[#6F747C]">{article.readTime}</span>
-                  </div>
-                  <h3 className="text-base font-bold text-[#151A22] group-hover:text-[#16A34A] transition-colors leading-snug">
-                    {article.title}
-                  </h3>
-                  <p className="text-xs text-[#6F747C] line-clamp-3 leading-relaxed">
-                    {article.summary}
+          ))}
+        </div>
+
+        {/* Article Reader Modal (Apple Sheet) */}
+        {activeArticle && (
+          <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6">
+              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">
+                    {activeArticle.category}
+                  </span>
+                  <h2 className="text-2xl font-bold text-slate-900 mt-1">
+                    {activeArticle.title}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Oleh: {activeArticle.author} • {activeArticle.date}
                   </p>
                 </div>
-                <div className="pt-4 border-t border-[#E8EAED] flex items-center justify-between mt-4">
-                  <span className="text-[11px] text-[#9CA3AF]">{article.date}</span>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#16A34A] group-hover:translate-x-1 transition-transform">
-                    Baca Panduan <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </Card>
-            ))}
+                <button
+                  onClick={() => setActiveArticle(null)}
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-slate-800 text-base leading-relaxed">
+                {activeArticle.content.map((paragraph, idx) => (
+                  <p key={idx} className="bg-slate-50/70 p-4 rounded-xl border border-slate-100">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <Button variant="primary" size="md" onClick={() => setActiveArticle(null)}>
+                  Tutup Panduan
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 

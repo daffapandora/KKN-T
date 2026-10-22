@@ -1,77 +1,80 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { idCopy } from '../../i18n/id';
-import { Globe, Smartphone, FileText } from 'lucide-react';
+import { Globe, Smartphone, FileText, ArrowRight } from 'lucide-react';
 
 export const AccessModeCards: React.FC = () => {
   return (
-    <section className="border-y border-[#E8EAED] bg-white">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#E8EAED]">
+    <section className="border-y border-slate-200/80 bg-white py-4">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200/80">
         {/* Card 1: WebGIS */}
-        <div className="p-8 lg:p-10 flex flex-col justify-between">
+        <div className="p-8 lg:p-10 flex flex-col justify-between hover:bg-slate-50/50 transition-colors">
           <div>
-            <div className="w-10 h-10 rounded-[6px] border border-[#E8EAED] bg-[#F9FAFB] flex items-center justify-center text-[#151A22] mb-5">
-              <Globe className="w-5 h-5 text-[#16A34A]" />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 mb-6 shadow-xs">
+              <Globe className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-[#151A22]">
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">
               {idCopy.accessModes.webgis.title}
             </h3>
-            <p className="mt-2 text-sm text-[#6F747C] leading-relaxed">
+            <p className="mt-3 text-base text-slate-600 leading-relaxed">
               {idCopy.accessModes.webgis.desc}
             </p>
           </div>
-          <div className="mt-6">
+          <div className="mt-8">
             <Link
               to="/peta"
-              className="text-xs font-semibold text-[#151A22] hover:text-[#16A34A] transition-colors"
+              className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-800 transition-colors group"
             >
-              {idCopy.accessModes.webgis.link}
+              <span>{idCopy.accessModes.webgis.link}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>
 
-        {/* Card 2: Aplikasi PWA/Android */}
-        <div className="p-8 lg:p-10 flex flex-col justify-between">
+        {/* Card 2: Akses Mobile & Offline */}
+        <div className="p-8 lg:p-10 flex flex-col justify-between hover:bg-slate-50/50 transition-colors">
           <div>
-            <div className="w-10 h-10 rounded-[6px] border border-[#E8EAED] bg-[#F9FAFB] flex items-center justify-center text-[#151A22] mb-5">
-              <Smartphone className="w-5 h-5 text-[#2563EB]" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 mb-6 shadow-xs">
+              <Smartphone className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-[#151A22]">
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">
               {idCopy.accessModes.pwa.title}
             </h3>
-            <p className="mt-2 text-sm text-[#6F747C] leading-relaxed">
+            <p className="mt-3 text-base text-slate-600 leading-relaxed">
               {idCopy.accessModes.pwa.desc}
             </p>
           </div>
-          <div className="mt-6">
+          <div className="mt-8">
             <Link
-              to="/aplikasi"
-              className="text-xs font-semibold text-[#151A22] hover:text-[#2563EB] transition-colors"
+              to="/sumber-air"
+              className="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors group"
             >
-              {idCopy.accessModes.pwa.link}
+              <span>Lihat Sumber Air & Navigasi</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>
 
         {/* Card 3: Laporan Warga */}
-        <div className="p-8 lg:p-10 flex flex-col justify-between">
+        <div className="p-8 lg:p-10 flex flex-col justify-between hover:bg-slate-50/50 transition-colors">
           <div>
-            <div className="w-10 h-10 rounded-[6px] border border-[#E8EAED] bg-[#F9FAFB] flex items-center justify-center text-[#151A22] mb-5">
-              <FileText className="w-5 h-5 text-[#7C3AED]" />
+            <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200/80 flex items-center justify-center text-purple-600 mb-6 shadow-xs">
+              <FileText className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-[#151A22]">
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">
               {idCopy.accessModes.citizenReport.title}
             </h3>
-            <p className="mt-2 text-sm text-[#6F747C] leading-relaxed">
+            <p className="mt-3 text-base text-slate-600 leading-relaxed">
               {idCopy.accessModes.citizenReport.desc}
             </p>
           </div>
-          <div className="mt-6">
+          <div className="mt-8">
             <Link
               to="/laporan"
-              className="text-xs font-semibold text-[#151A22] hover:text-[#7C3AED] transition-colors"
+              className="inline-flex items-center gap-2 text-sm font-bold text-purple-700 hover:text-purple-800 transition-colors group"
             >
-              {idCopy.accessModes.citizenReport.link}
+              <span>{idCopy.accessModes.citizenReport.link}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>

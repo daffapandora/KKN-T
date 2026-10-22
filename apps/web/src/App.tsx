@@ -13,6 +13,8 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ 
 const ReportPage = lazy(() => import('./pages/ReportPage').then((m) => ({ default: m.ReportPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })));
 
+const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+
 const RouteLoadingFallback = () => (
   <div className="flex-1 flex items-center justify-center p-12 text-sm text-[#6F747C]">
     <div className="flex items-center gap-2">
@@ -37,6 +39,8 @@ export const App: React.FC = () => {
               <Route path="/edukasi" element={<EducationPage />} />
               <Route path="/dasbor" element={<DashboardPage />} />
               <Route path="/laporan" element={<ReportPage />} />
+              <Route path="/partisipatif" element={<MapPage />} />
+              <Route path="/masuk" element={<LoginPage />} />
               <Route path="/privasi" element={<PrivacyPolicyPage />} />
               <Route path="*" element={<LandingPage />} />
             </Routes>
