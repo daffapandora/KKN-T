@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173a31">
+  <title>WebGIS Desa Kemitir</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="identity"><span>Proyek KKN-T</span><h1>WebGIS Desa Kemitir</h1></div>
+    <p>Sumowono, Kabupaten Semarang</p>
+  </header>
+  <main>
+    <aside aria-labelledby="layers-title">
+      <div>
+        <p class="eyebrow">Eksplorasi Peta</p>
+        <h2 id="layers-title">Lapisan peta</h2>
+        <p class="hint">Pilih satu lapisan di atas peta dasar.</p>
+      </div>
+      <fieldset id="layers" disabled>
+        <legend class="sr-only">Pilihan lapisan peta</legend>
+        <label class="layer"><input type="radio" name="layer" value="none" checked><span>Peta dasar<small>OpenStreetMap · Cakupan lokal</small></span></label>
+        <label class="layer"><input type="radio" name="layer" value="rgb" disabled><span>Foto udara<small>Ortomosaik RGB</small></span><span class="availability" data-state="rgb">Belum ada</span></label>
+        <label class="layer"><input type="radio" name="layer" value="ndvi" disabled><span>NDVI<small>Indeks vegetasi · Red</small></span><span class="availability" data-state="ndvi">Belum ada</span></label>
+        <label class="layer"><input type="radio" name="layer" value="ndre" disabled><span>NDRE<small>Indeks vegetasi · Red Edge</small></span><span class="availability" data-state="ndre">Belum ada</span></label>
+        <label class="layer"><input type="radio" name="layer" value="hillshade" disabled><span>Relief medan<small>Hillshade dari DTM</small></span><span class="availability" data-state="hillshade">Belum ada</span></label>
+      </fieldset>
+      <section id="overlay-tools" hidden aria-label="Pengaturan lapisan">
+        <label class="opacity" for="opacity">Opasitas <output id="opacity-value" for="opacity">85%</output></label>
+        <input type="range" id="opacity" min="0" max="100" value="85">
+        <div id="index-legend" hidden>
+          <p class="eyebrow">Skala indeks</p>
+          <div class="color-scale" aria-hidden="true"></div>
+          <div class="scale-values"><span>−1</span><span>0</span><span>+1</span></div>
+          <p class="hint">Nilai indeks vegetasi, bukan kelas risiko kekeringan.</p>
+        </div>
+      </section>
+      <p class="status" id="catalog-status" role="status">Memeriksa katalog layer…</p>
+      <a class="source" href="https://drive.google.com/drive/folders/12azqkvMbPMFPutg-R1l0G_ycj7clcSKC" target="_blank" rel="noopener">Folder sumber data di Drive ↗</a>
+    </aside>
+    <section class="map-panel" aria-label="Area peta">
+      <div id="map" aria-label="Peta interaktif Desa Kemitir"></div>
+      <button type="button" id="recenter" class="recenter" disabled>Kembali ke area peta</button>
+      <p id="map-status" class="map-status" role="status" hidden></p>
+      <noscript>Aktifkan JavaScript untuk membuka peta.</noscript>
+    </section>
+  </main>
+</body>
+</html>
