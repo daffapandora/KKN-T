@@ -1,0 +1,4 @@
+Band 1 - Green 0,544 – 0,576 µm
+Band 2 - Red 0,634 – 0,666 µm
+Band 3 - Red Edge  0,714 – 0,746 µm
+Band 4 - Near Infrared 0,834 – 0,886 µm

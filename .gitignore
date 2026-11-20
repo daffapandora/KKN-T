@@ -1,0 +1,22 @@
+# Raster besar: simpan di Drive, jangan di-commit
+*.tif
+*.tiff
+*.TIF
+*.ecw
+*.jp2
+*.las
+*.laz
+data/raw/
+processed/
+tiles/
+*.pmtiles
+*.aux.xml
+*.ovr
+# Kecuali raster kecil untuk demo
+!webgis/assets/**/*.tif
+# Sistem
+.DS_Store
+Thumbs.db
+node_modules/
+__pycache__/
+.venv/
