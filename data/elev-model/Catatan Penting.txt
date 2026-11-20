@@ -1,0 +1,5 @@
+Noted 
+- DSM dibuat dari hasil pengolahan fotogrametri RGB
+- DTM dibuat dari hasil pengolahan fotogrametri Multispektra;
+Catatan Penting!!!!
+akurasi dari elevasi model dapat dilihat pada uji akurasi yang terletak pada folder masing masing type sensor

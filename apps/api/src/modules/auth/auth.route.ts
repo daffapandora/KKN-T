@@ -7,26 +7,49 @@ import {
   rotateRefreshToken,
   getUserById,
 } from './auth.service';
+import { verifyTurnstileToken } from '../security/turnstile.service';
 
 export async function authRoutes(fastify: FastifyInstance) {
-  // 1. Citizen Registration with Invite Code & UU PDP Consent
-  fastify.post('/api/v1/auth/register', async (request, reply) => {
-    const parsed = RegisterCitizenSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Data pendaftaran warga tidak valid',
-          details: parsed.error.errors.map((e) => ({
-            field: e.path.join('.'),
-            issue: e.message,
-          })),
-          requestId: request.id,
+  // 1. Citizen Registration with Invite Code & UU PDP Consent (Anti-bot rate limited)
+  fastify.post(
+    '/api/v1/auth/register',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '5 minutes',
         },
-      });
-    }
+      },
+    },
+    async (request, reply) => {
+      const parsed = RegisterCitizenSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Data pendaftaran warga tidak valid',
+            details: parsed.error.errors.map((e) => ({
+              field: e.path.join('.'),
+              issue: e.message,
+            })),
+            requestId: request.id,
+          },
+        });
+      }
 
-    const user = await registerCitizenUser(parsed.data);
+      // Cloudflare Turnstile Human Verification
+      const turnstile = await verifyTurnstileToken(parsed.data.turnstileToken, request.ip);
+      if (!turnstile.success) {
+        return reply.status(403).send({
+          error: {
+            code: 'BOT_VERIFICATION_FAILED',
+            message: turnstile.error || 'Verifikasi bot Cloudflare gagal. Silakan coba kembali.',
+            requestId: request.id,
+          },
+        });
+      }
+
+      const user = await registerCitizenUser(parsed.data);
 
     // Issue JWT access token (15 mins)
     const accessToken = fastify.jwt.sign({
@@ -68,24 +91,46 @@ export async function authRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // 2. Login (Constant-Time Verification)
-  fastify.post('/api/v1/auth/login', async (request, reply) => {
-    const parsed = LoginSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Nomor telepon dan kata sandi wajib diisi',
-          details: parsed.error.errors.map((e) => ({
-            field: e.path.join('.'),
-            issue: e.message,
-          })),
-          requestId: request.id,
+  // 2. Login (Constant-Time Verification & Anti-Brute Force Rate Limiting)
+  fastify.post(
+    '/api/v1/auth/login',
+    {
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
         },
-      });
-    }
+      },
+    },
+    async (request, reply) => {
+      const parsed = LoginSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Nomor telepon dan kata sandi wajib diisi',
+            details: parsed.error.errors.map((e) => ({
+              field: e.path.join('.'),
+              issue: e.message,
+            })),
+            requestId: request.id,
+          },
+        });
+      }
 
-    const user = await authenticateUser(parsed.data);
+      // Cloudflare Turnstile Human Verification (Defense against credential brute forcing)
+      const turnstile = await verifyTurnstileToken(parsed.data.turnstileToken, request.ip);
+      if (!turnstile.success) {
+        return reply.status(403).send({
+          error: {
+            code: 'BOT_VERIFICATION_FAILED',
+            message: turnstile.error || 'Verifikasi bot Cloudflare gagal. Silakan coba kembali.',
+            requestId: request.id,
+          },
+        });
+      }
+
+      const user = await authenticateUser(parsed.data);
 
     const accessToken = fastify.jwt.sign({
       id: user.id,

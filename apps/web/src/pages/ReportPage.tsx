@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateReportSchema, CreateReportInput, REPORT_CATEGORIES } from '@kemitir/shared';
 import { Button, Card } from '@kemitir/ui';
-import { MapPin, Camera, AlertCircle, CheckCircle2, Droplets, Sprout, Home, Wrench, Truck, HelpCircle, ArrowRight, Compass } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { MapPin, Camera, AlertCircle, CheckCircle2, Droplets, Sprout, Home, Wrench, Truck, HelpCircle, ArrowRight, Compass, X } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { TurnstileBadge } from '../components/security/TurnstileBadge';
 
 export const ReportPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
   const [submitted, setSubmitted] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [coords, setCoords] = useState<[number, number]>([110.3155, -7.2285]);
   const [accuracy, setAccuracy] = useState<number>(10);
   const [locationCaptured, setLocationCaptured] = useState(false);
+  const [selectedPhotoName, setSelectedPhotoName] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState('1x00000000000000000000AA');
 
   const {
     register,
@@ -22,7 +27,7 @@ export const ReportPage: React.FC = () => {
   } = useForm<CreateReportInput>({
     resolver: zodResolver(CreateReportSchema),
     defaultValues: {
-      category: 'Krisis Air Bersih Rumah Tangga',
+      category: (categoryParam as any) || 'Krisis Air Bersih Rumah Tangga',
       description: '',
       geometry: {
         type: 'Point',
@@ -32,6 +37,12 @@ export const ReportPage: React.FC = () => {
       photoIds: [],
     },
   });
+
+  useEffect(() => {
+    if (categoryParam) {
+      setValue('category', categoryParam as any);
+    }
+  }, [categoryParam, setValue]);
 
   const selectedCategory = watch('category');
 
@@ -114,7 +125,7 @@ export const ReportPage: React.FC = () => {
       const res = await fetch('/api/v1/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, turnstileToken }),
       });
 
       if (res.ok) {
@@ -131,15 +142,15 @@ export const ReportPage: React.FC = () => {
 
   if (submitted) {
     return (
-      <div className="flex-1 bg-slate-50/60 py-16">
+      <div className="flex-1 bg-slate-50 py-6 sm:py-16">
         <div className="max-w-xl mx-auto px-4 text-center">
-          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-md space-y-6">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-10 border border-slate-200 space-y-5 sm:space-y-6">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
 
             <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
                 Laporan Berhasil Terkirim
               </h2>
               <p className="mt-3 text-base text-slate-600 leading-relaxed">
@@ -156,16 +167,14 @@ export const ReportPage: React.FC = () => {
               <Button
                 variant="brand"
                 size="lg"
-                className="flex-1 font-semibold"
+                className="sm:flex-1"
                 onClick={() => setSubmitted(false)}
               >
                 Kirim Laporan Lainnya
               </Button>
-              <Link to="/peta" className="flex-1">
-                <Button variant="secondary" size="lg" className="w-full font-semibold">
+              <Button as={Link} to="/peta" variant="secondary" size="lg" className="sm:flex-1">
                   Kembali ke Peta
                 </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -174,32 +183,32 @@ export const ReportPage: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-slate-50/60 py-10">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
+    <div className="flex-1 bg-slate-50 py-5 sm:py-10">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-5 sm:space-y-8">
         
-        {/* Apple Header */}
+        {/* Header Formulir Lapor Krisis Air */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold tracking-wide uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
             <Droplets className="w-3.5 h-3.5" />
             <span>Partisipasi Warga Desa Kemitir</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 tracking-tight text-balance">
             Formulir Lapor Krisis Air & Kemarau
           </h1>
-          <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg text-slate-600 max-w-xl mx-auto leading-relaxed">
             Laporkan kendala air di lingkungan RT atau sawah Anda. Mudah diisi dengan tombol pilihan besar dan deteksi GPS satu sentuhan.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-8">
           
           {/* Step 1: Visual Category Selection Cards (Ergonomic for 30-50 age group) */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200 space-y-4">
             <div>
-              <span className="text-xs font-bold text-emerald-700 tracking-wider uppercase block">
+              <span className="text-xs font-semibold text-emerald-700 block">
                 Langkah 1 dari 3
               </span>
-              <h2 className="text-xl font-bold text-slate-900 mt-0.5">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">
                 Pilih Kategori Permasalahan Air *
               </h2>
               <p className="text-sm text-slate-500">
@@ -216,10 +225,11 @@ export const ReportPage: React.FC = () => {
                   <button
                     type="button"
                     key={cat.id}
+                    aria-pressed={isSelected}
                     onClick={() => setValue('category', cat.id as any)}
-                    className={`p-4 rounded-2xl border text-left transition-all duration-150 flex items-start gap-3.5 select-none ${
+                    className={`p-3.5 sm:p-4 min-h-[64px] rounded-2xl border text-left transition-colors flex items-start gap-3.5 select-none ${
                       isSelected
-                        ? 'border-emerald-600 bg-emerald-50/40 ring-2 ring-emerald-600/30 shadow-xs'
+                        ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/30'
                         : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
                     }`}
                   >
@@ -250,12 +260,12 @@ export const ReportPage: React.FC = () => {
           </div>
 
           {/* Step 2: Location and GPS Capture */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200 space-y-4">
             <div>
-              <span className="text-xs font-bold text-emerald-700 tracking-wider uppercase block">
+              <span className="text-xs font-semibold text-emerald-700 block">
                 Langkah 2 dari 3
               </span>
-              <h2 className="text-xl font-bold text-slate-900 mt-0.5">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">
                 Titik Koordinat Lokasi Kejadian *
               </h2>
               <p className="text-sm text-slate-500">
@@ -263,10 +273,10 @@ export const ReportPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-emerald-600" />
+                  <MapPin className="w-5 h-5 text-emerald-600 shrink-0" />
                   <span className="text-sm font-bold text-slate-900">
                     {locationCaptured ? 'Lokasi Berhasil Terdeteksi' : 'Titik Standar: Pusat Kemitir'}
                   </span>
@@ -279,25 +289,27 @@ export const ReportPage: React.FC = () => {
                 </span>
               </div>
 
-              <button
+              <Button
                 type="button"
+                variant="brand"
+                size="md"
                 onClick={getCurrentLocation}
                 disabled={gpsLoading}
-                className="h-11 px-5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 shadow-xs disabled:opacity-50"
+                className="w-full sm:w-auto shrink-0"
               >
-                <Compass className={`w-4 h-4 ${gpsLoading ? 'animate-spin' : ''}`} />
-                <span>{gpsLoading ? 'Mendeteksi Satelit...' : 'Deteksi Lokasi Saya'}</span>
-              </button>
+                <Compass className={`w-4 h-4 ${gpsLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                <span>{gpsLoading ? 'Mendeteksi Lokasi...' : 'Deteksi Lokasi Saya'}</span>
+              </Button>
             </div>
           </div>
 
           {/* Step 3: Description and Photo */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-5">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200 space-y-5">
             <div>
-              <span className="text-xs font-bold text-emerald-700 tracking-wider uppercase block">
+              <span className="text-xs font-semibold text-emerald-700 block">
                 Langkah 3 dari 3
               </span>
-              <h2 className="text-xl font-bold text-slate-900 mt-0.5">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">
                 Keterangan Lapangan & Bukti *
               </h2>
               <p className="text-sm text-slate-500">
@@ -307,14 +319,15 @@ export const ReportPage: React.FC = () => {
 
             {/* Description Textarea (Large Font for 30-50yo users) */}
             <div>
-              <label className="block text-sm font-bold text-slate-900 mb-2">
+              <label htmlFor="report-description" className="block text-sm font-semibold text-slate-900 mb-2">
                 Deskripsi Kejadian / Kondisi Air *
               </label>
               <textarea
+                id="report-description"
                 {...register('description')}
                 rows={4}
                 placeholder="Contoh: Sudah 4 hari air dari tandon umum tidak mengalir ke RT 02. Debit mata air Tuk Gedang menyusut dan sekitar 30 keluarga membutuhkan bantuan air bersih darurat..."
-                className="w-full text-base p-4 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all"
+                className="w-full text-base p-3.5 sm:p-4 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all"
               />
               {errors.description && (
                 <p className="text-xs font-semibold text-rose-600 mt-1">{errors.description.message}</p>
@@ -323,18 +336,42 @@ export const ReportPage: React.FC = () => {
 
             {/* Photo Upload Area */}
             <div>
-              <label className="block text-sm font-bold text-slate-900 mb-2">
+              <span id="report-photo-label" className="block text-sm font-semibold text-slate-900 mb-2">
                 Foto Bukti Lapangan (Opsional)
-              </label>
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:bg-slate-50/80 transition-colors cursor-pointer">
-                <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              </span>
+              <label className="block border-2 border-dashed border-slate-300 rounded-2xl p-5 sm:p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-[#16A34A]">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  capture="environment"
+                  aria-labelledby="report-photo-label"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setSelectedPhotoName(file ? file.name : null);
+                  }}
+                />
+                <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" aria-hidden="true" />
                 <span className="text-sm font-semibold text-slate-900 block">
-                  Pilih Foto dari Galeri atau Ambil Foto Kamera
+                  {selectedPhotoName ? `Foto Terpilih: ${selectedPhotoName}` : 'Pilih Foto dari Galeri atau Ambil Foto Kamera'}
                 </span>
                 <span className="text-xs text-slate-500 block mt-1">
                   Format gambar JPG atau PNG (Maksimal 5MB)
                 </span>
-              </div>
+              </label>
+              {selectedPhotoName && (
+                <div className="mt-2 flex items-center justify-between text-xs bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl text-emerald-900">
+                  <span className="truncate font-medium">Foto: {selectedPhotoName}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPhotoName(null)}
+                    className="ml-2 font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Hapus</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Privacy Protection Callout (UU PDP) */}
@@ -346,16 +383,19 @@ export const ReportPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Submit Button (Apple Large 52px Touch Target) */}
+            {/* Cloudflare Turnstile Human Verification & Bot Shield */}
+            <TurnstileBadge onVerify={setTurnstileToken} />
+
+            {/* Tombol Kirim Laporan (Ergonomis untuk Layar Ponsel Warga) */}
             <Button
               type="submit"
               variant="brand"
               size="lg"
-              className="w-full h-13 text-base font-bold shadow-md gap-2"
+              className="w-full"
               isLoading={isSubmitting}
             >
               <span>Kirim Laporan Krisis Air Sekarang</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5" aria-hidden="true" />
             </Button>
           </div>
 

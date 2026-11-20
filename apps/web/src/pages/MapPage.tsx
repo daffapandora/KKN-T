@@ -2,40 +2,38 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { idCopy } from '../i18n/id';
 import { Button, StatusChip } from '@kemitir/ui';
 import {
-  Layers,
-  MapPin,
   Search,
-  Filter,
-  Eye,
-  EyeOff,
   Navigation,
-  ExternalLink,
-  ShieldAlert,
   Droplets,
+  ShieldAlert,
   Activity,
-  Layers2,
-  Info,
-  Maximize2,
-  Check,
   Compass,
   Crosshair,
-  Sliders,
+  Layers,
   X,
   Plus,
   Minus,
-  Sparkles,
-  ArrowRight,
+  MapPin,
+  Check,
+  Copy,
+  Share2,
+  Box,
+  Info,
+  AlertTriangle,
+  Flame,
+  ShieldCheck,
 } from 'lucide-react';
 
-// Import Authentic GeoJSON Datasets
+// Authentic GeoJSON datasets
 import boundariesData from '../data/geojson/boundaries.json';
 import hazardData from '../data/geojson/hazard.json';
 import riskData from '../data/geojson/risk.json';
 import participatoryData from '../data/geojson/participatory.json';
 import priorityData from '../data/geojson/priority.json';
+import controlPointsData from '../data/geojson/controlPoints.json';
+import { AccuracyMetadataModal } from '../components/map/AccuracyMetadataModal';
 
 interface LayerState {
   id: string;
@@ -48,6 +46,29 @@ interface LayerState {
   description: string;
 }
 
+interface FeatureDetail {
+  title: string;
+  type: string;
+  status: string;
+  dusun: string;
+  description: string;
+  debit?: string;
+  hazardClass?: string;
+  coordinates?: [number, number];
+}
+
+interface SearchItem {
+  id: string;
+  name: string;
+  categoryLabel: string;
+  dusun: string;
+  coordinates: [number, number];
+  debit?: string;
+  hazardClass?: string;
+  status: string;
+  description: string;
+}
+
 export const MapPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeModeParam = searchParams.get('mode') || searchParams.get('layer') || 'all';
@@ -57,48 +78,43 @@ export const MapPage: React.FC = () => {
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Close search dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(event.target as Node)
-      ) {
-        setSearchDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Basemap state: Streets vs Satellite (Mapbox / Esri high-res satellite)
+  // Basemap & UI State
   const [basemap, setBasemap] = useState<'streets' | 'satellite'>('satellite');
-  const [mapboxToken, setMapboxToken] = useState<string>(
-    import.meta.env.VITE_MAPBOX_TOKEN || ''
-  );
+  const [mapboxToken] = useState<string>(() => {
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    return typeof token === 'string' && token.startsWith('pk.') && !token.includes('optional') ? token : '';
+  });
+  const [layerPanelOpen, setLayerPanelOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<FeatureDetail | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const [is3D, setIs3D] = useState(false);
+  const [bearing, setBearing] = useState(0);
+  const [copiedCoord, setCopiedCoord] = useState(false);
+  const [accuracyModalOpen, setAccuracyModalOpen] = useState(false);
 
+  // Thematic Layers configuration
   const [layers, setLayers] = useState<LayerState[]>([
     {
       id: '1',
       slug: 'bahaya-kekeringan',
-      title: 'Peta Bahaya Kekeringan (Hazard)',
+      title: 'Bahaya Kekeringan (Hazard)',
       category: 'hazard',
       active: true,
-      opacity: 0.7,
-      color: '#F97316',
+      opacity: 0.4,
+      color: '#EA580C',
       description: 'Zonasi bahaya kelerengan, indeks vegetasi NDVI, dan curah hujan.',
     },
     {
       id: '2',
       slug: 'risiko-kekeringan',
-      title: 'Peta Risiko Kekeringan (Risk)',
+      title: 'Risiko Kekeringan (Risk)',
       category: 'risk',
       active: activeModeParam.includes('risiko') || activeModeParam === 'risk',
-      opacity: 0.65,
+      opacity: 0.45,
       color: '#DC2626',
-      description: 'Analisis risiko gabungan terhadap rumah tangga & lahan tani kritis.',
+      description: 'Analisis risiko gabungan terhadap rumah tangga dan lahan pertanian.',
     },
     {
       id: '3',
@@ -107,8 +123,8 @@ export const MapPage: React.FC = () => {
       category: 'water',
       active: true,
       opacity: 1,
-      color: '#2563EB',
-      description: 'Inventarisasi mata air pegunungan, sumur bor, & kapasitas tandon.',
+      color: '#0284C7',
+      description: 'Inventarisasi mata air pegunungan, sumur bor, dan kapasitas tandon.',
     },
     {
       id: '4',
@@ -116,59 +132,43 @@ export const MapPage: React.FC = () => {
       title: 'Peta Partisipatif Warga',
       category: 'participatory',
       active: activeModeParam.includes('partisipatif') || activeModeParam === 'participatory',
-      opacity: 0.85,
+      opacity: 0.7,
       color: '#7C3AED',
-      description: 'Jalur pipa swadaya masyarakat, titik retakan, & sawah terdampak.',
+      description: 'Jalur pipa swadaya masyarakat, titik retakan tanah, dan embung warga.',
     },
     {
       id: '5',
       slug: 'batas-desa',
-      title: 'Batas Wilayah Administrasi & RT/RW',
+      title: 'Batas Wilayah & Dusun',
       category: 'base',
       active: true,
-      opacity: 0.9,
-      color: '#0F172A',
-      description: 'Batas resmi desa & 4 dusun (Kemitir Lor, Kidul, Garon, Kalitengah).',
+      opacity: 0.85,
+      color: '#334155',
+      description: 'Batas resmi desa dan 4 dusun (Kemitir Lor, Kidul, Garon, Kalitengah).',
     },
     {
       id: '6',
       slug: 'prioritas',
-      title: 'Prioritas Penanganan Bencana',
+      title: 'Prioritas Intervensi Darurat',
       category: 'priority',
       active: activeModeParam.includes('prioritas') || activeModeParam === 'priority',
-      opacity: 0.8,
+      opacity: 0.5,
       color: '#B91C1C',
-      description: 'Zona tanggap darurat dropping tangki air & bantuan pompa pipa.',
+      description: 'Zona tanggap darurat dropping tangki air dan bantuan pompa pipa.',
+    },
+    {
+      id: '7',
+      slug: 'titik-kontrol-gcp-icp',
+      title: 'Titik Kontrol GCP & ICP (Perka BIG)',
+      category: 'base',
+      active: true,
+      opacity: 1,
+      color: '#10B981',
+      description: '18 titik GCP & ICP terverifikasi geodetik sesuai Perka BIG No. 15/2014 (CE90 = 0.186m).',
     },
   ]);
 
-  // Selected feature drawer state
-  const [selectedFeature, setSelectedFeature] = useState<{
-    title: string;
-    type: string;
-    status: string;
-    dusun: string;
-    description: string;
-    debit?: string;
-    hazardClass?: string;
-    coordinates?: [number, number];
-    extraAttributes?: Record<string, any>;
-  } | null>({
-    title: 'Tuk Mulyo (Mata Air Utama)',
-    type: 'Mata Air Pegunungan',
-    status: 'Aktif Mengalir',
-    dusun: 'RT 01 RW 01, Dusun Kemitir Lor',
-    description: 'Sumber air minum utama Dusun Kemitir Lor. Memiliki bak penampung permanen berkapasitas 15.000 liter yang melayani 145 KK.',
-    debit: '12.5 liter / detik',
-    hazardClass: 'Rendah',
-    coordinates: [110.3142, -7.2268],
-  });
-
-  const [layerPanelOpen, setLayerPanelOpen] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
-
-  // Sample water source pins
+  // Water source markers
   const waterSourcePins = [
     {
       id: 'ws-1',
@@ -176,11 +176,11 @@ export const MapPage: React.FC = () => {
       type: 'Mata Air Pegunungan',
       status: 'Aktif Mengalir',
       dusun: 'RT 01 RW 01, Dusun Kemitir Lor',
-      description: 'Sumber air minum utama warga Kemitir Lor. Debit stabil sepanjang kemarau.',
+      description: 'Sumber air minum utama warga Kemitir Lor. Bak penampung permanen berkapasitas 15.000 liter melayani 145 KK dengan debit stabil sepanjang kemarau.',
       debit: '12.5 liter / detik',
       hazardClass: 'Rendah',
       coords: [110.3142, -7.2268] as [number, number],
-      color: '#2563EB',
+      color: '#0284C7',
     },
     {
       id: 'ws-2',
@@ -188,11 +188,11 @@ export const MapPage: React.FC = () => {
       type: 'Sumur Bor',
       status: 'Aktif Mengalir',
       dusun: 'Dusun Kemitir Kidul',
-      description: 'Sumur bor bantuan pemerintah dengan pompa celup tenaga surya & PLN.',
+      description: 'Sumur bor dalam bantuan pemerintah dengan pompa celup listrik tenaga surya dan PLN, melayani kawasan pemukiman tengah.',
       debit: '8.0 liter / detik',
       hazardClass: 'Sedang',
       coords: [110.3185, -7.2295] as [number, number],
-      color: '#2563EB',
+      color: '#0284C7',
     },
     {
       id: 'ws-3',
@@ -200,7 +200,7 @@ export const MapPage: React.FC = () => {
       type: 'Mata Air',
       status: 'Debit Menurun',
       dusun: 'Dusun Kemitir Kidul',
-      description: 'Debit mengalami penyusutan drastis di puncak musim kemarau.',
+      description: 'Mata air lereng perbukitan, debit mengalami penurunan drastis di puncak musim kemarau memerlukan pemantauan berkala.',
       debit: '2.1 liter / detik',
       hazardClass: 'Tinggi',
       coords: [110.321, -7.234] as [number, number],
@@ -212,25 +212,13 @@ export const MapPage: React.FC = () => {
       type: 'Embung Penampung Hujan',
       status: 'Sedimentasi Tinggi',
       dusun: 'Dusun Garon RT 01',
-      description: 'Embung irigasi seluas 800m2 untuk kelompok tani palawija sayur Garon.',
+      description: 'Embung irigasi seluas 800m2 untuk kelompok tani palawija dan sayuran kubis, cabai, dan labu siam Dusun Garon.',
       debit: 'Tampungan 4.000 m3',
       hazardClass: 'Tinggi',
-      coords: [110.3265, -7.2265] as [number, number],
+      coords: [110.3095, -7.2235] as [number, number],
       color: '#0284C7',
     },
   ];
-
-  interface SearchItem {
-    id: string;
-    name: string;
-    categoryLabel: string;
-    dusun: string;
-    coordinates: [number, number];
-    debit?: string;
-    hazardClass?: string;
-    status: string;
-    description: string;
-  }
 
   const searchableFeatures: SearchItem[] = [
     {
@@ -253,7 +241,7 @@ export const MapPage: React.FC = () => {
       debit: '8.0 liter / detik',
       hazardClass: 'Sedang',
       status: 'Aktif Beroperasi',
-      description: 'Sumur bor dalam bantuan pemerintah dengan pompa celup listrik dan akses jalan aspal leluasa truk tangki.',
+      description: 'Sumur bor dalam bantuan pemerintah dengan akses jalan aspal leluasa truk tangki.',
     },
     {
       id: 'ws-3',
@@ -275,18 +263,7 @@ export const MapPage: React.FC = () => {
       debit: 'Tampungan 4.000 m3',
       hazardClass: 'Tinggi',
       status: 'Sedimentasi Tinggi',
-      description: 'Embung penampung hujan untuk irigasi sawah sayur kubis, cabai, dan labu siam kelompok tani Garon.',
-    },
-    {
-      id: 'ws-5',
-      name: 'Mata Air Kalitengah Swadaya',
-      categoryLabel: 'Mata Air Swadaya',
-      dusun: 'Dusun Kalitengah',
-      coordinates: [110.3255, -7.238],
-      debit: '6.2 liter / detik',
-      hazardClass: 'Rendah',
-      status: 'Aktif Swadaya',
-      description: 'Mata air pegunungan swadaya dengan pipa gravitasi langsung menuju 4 tandon pembagi lingkungan.',
+      description: 'Embung penampung hujan untuk irigasi sawah sayur kelompok tani Garon.',
     },
     {
       id: 'vil-1',
@@ -294,8 +271,8 @@ export const MapPage: React.FC = () => {
       categoryLabel: 'Wilayah Dusun',
       dusun: 'Desa Kemitir (Bagian Utara)',
       coordinates: [110.3145, -7.2265],
-      status: 'Pemukiman Terpadat',
-      description: 'Dusun Kemitir Lor dengan wilayah RT 01-03, pemukiman utama dengan cakupan pipa Tuk Mulyo.',
+      status: 'Pemukiman Utama',
+      description: 'Dusun Kemitir Lor dengan wilayah RT 01-03, pemukiman utama dengan pasokan Tuk Mulyo.',
     },
     {
       id: 'vil-2',
@@ -304,7 +281,7 @@ export const MapPage: React.FC = () => {
       dusun: 'Desa Kemitir (Bagian Selatan)',
       coordinates: [110.318, -7.230],
       status: 'Zona Rawan Kemarau',
-      description: 'Dusun Kemitir Kidul pada ketinggian 1.050 mdpl dengan kerentanan kekeringan perbukitan atas.',
+      description: 'Dusun Kemitir Kidul pada ketinggian 1.050 mdpl dengan kerentanan kemarau perbukitan.',
     },
     {
       id: 'vil-3',
@@ -319,37 +296,10 @@ export const MapPage: React.FC = () => {
       id: 'vil-4',
       name: 'Dusun Kalitengah',
       categoryLabel: 'Wilayah Dusun',
-      dusun: 'Desa Kemitir (Lereng Terjal)',
+      dusun: 'Desa Kemitir (Lereng Timur)',
       coordinates: [110.325, -7.2375],
       status: 'Topografi Terjal',
-      description: 'Dusun Kalitengah di lereng bukit timur dengan sistem air swadaya masyarakat.',
-    },
-    {
-      id: 'vil-5',
-      name: 'Kantor Balai Desa Kemitir',
-      categoryLabel: 'Pusat Pemerintahan',
-      dusun: 'Pusat Desa Kemitir, Kec. Sumowono',
-      coordinates: [110.3155, -7.2285],
-      status: 'Pusat Posko Siaga',
-      description: 'Pusat administrasi desa, titik kumpul evakuasi, dan koordinasi bantuan logistik BPBD.',
-    },
-    {
-      id: 'inf-1',
-      name: 'Jalur Pipa Transmisi RT 02 Kidul',
-      categoryLabel: 'Infrastruktur Pipa',
-      dusun: 'Dusun Kemitir Kidul',
-      coordinates: [110.3195, -7.2315],
-      status: 'Perlu Penggantian HDPE',
-      description: 'Jalur pipa paralon 350 meter melintasi zona kemiringan terjal dan tanah retak lereng.',
-    },
-    {
-      id: 'inf-2',
-      name: 'Tandon Air Balai RT 02 (5.000 L)',
-      categoryLabel: 'Tandon Penampung',
-      dusun: 'Dusun Kemitir Kidul',
-      coordinates: [110.3185, -7.2295],
-      status: 'Titik Drop Tangki',
-      description: 'Titik serah tandon umum penampungan bantuan dropping air bersih mobil tangki BPBD Semarang.',
+      description: 'Dusun Kalitengah di lereng timur dengan sistem air perpipaan swadaya masyarakat.',
     },
     {
       id: 'haz-1',
@@ -358,86 +308,50 @@ export const MapPage: React.FC = () => {
       dusun: 'RT 02 Kemitir Kidul',
       coordinates: [110.319, -7.231],
       hazardClass: 'Sangat Tinggi',
-      status: 'Sangat Mendesak (Skor 92.4)',
-      description: 'Prioritas tertinggi: mata air lokal surut >75% dan 380 jiwa warga mengalami keterbatasan air bersih.',
-    },
-    {
-      id: 'haz-2',
-      name: 'Zona Prioritas 2: Sawah Tadah Hujan Garon',
-      categoryLabel: 'Zona Prioritas Tani',
-      dusun: 'Dusun Garon',
-      coordinates: [110.309, -7.223],
-      hazardClass: 'Tinggi',
-      status: 'Prioritas Tinggi (Skor 84.1)',
-      description: 'Kekeringan 42 hektar lahan sawah sayur palawija akibat penyusutan air embung pertanian.',
+      status: 'Mendesak (Skor 92.4)',
+      description: 'Prioritas tertinggi: mata air lokal surut dan 380 jiwa warga mengalami keterbatasan air bersih.',
     },
   ];
 
-  const searchResults = searchQuery.trim()
-    ? searchableFeatures.filter((item) => {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          item.name.toLowerCase().includes(q) ||
-          item.dusun.toLowerCase().includes(q) ||
-          item.categoryLabel.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q) ||
-          item.status.toLowerCase().includes(q)
-        );
-      })
-    : [];
-
-  const handleSelectSearchResult = (item: (typeof searchableFeatures)[0]) => {
-    // Automatically enable corresponding layer so the visual feature is visible on map
-    if (item.id.startsWith('inf-')) {
-      setLayers((prev) =>
-        prev.map((l) => (l.slug === 'peta-partisipatif' ? { ...l, active: true } : l))
-      );
-    } else if (item.id.startsWith('haz-')) {
-      setLayers((prev) =>
-        prev.map((l) =>
-          l.slug === 'prioritas' || l.slug === 'bahaya-kekeringan' ? { ...l, active: true } : l
-        )
-      );
-    } else if (item.id.startsWith('ws-')) {
-      setLayers((prev) =>
-        prev.map((l) => (l.slug === 'sumber-air' ? { ...l, active: true } : l))
-      );
+  // Hero search hands off its query through ?search=
+  const initialSearch = searchParams.get('search');
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchQuery(initialSearch);
+      setSearchDropdownOpen(true);
     }
+  }, [initialSearch]);
 
-    if (mapInstance.current) {
-      mapInstance.current.flyTo({
-        center: item.coordinates,
-        zoom: 16.5,
-        pitch: 35,
-        bearing: 0,
-        duration: 1200,
-      });
-    }
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    setSelectedFeature({
-      title: item.name,
-      type: item.categoryLabel,
-      status: item.status,
-      dusun: item.dusun,
-      description: item.description,
-      debit: item.debit,
-      hazardClass: item.hazardClass,
-      coordinates: item.coordinates,
-    });
+  // Keyboard Escape listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSearchDropdownOpen(false);
+        setLayerPanelOpen(false);
+        setSelectedFeature(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-    setSearchDropdownOpen(false);
-  };
-
-  // Helper to get basemap style
+  // Basemap style specification
   const getBasemapStyle = (type: 'streets' | 'satellite'): maplibregl.StyleSpecification => {
     if (type === 'satellite') {
       const satelliteTiles = mapboxToken
-        ? [
-          `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.webp?access_token=${mapboxToken}`,
-        ]
-        : [
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        ];
+        ? [`https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.webp?access_token=${mapboxToken}`]
+        : ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'];
 
       return {
         version: 8,
@@ -446,9 +360,7 @@ export const MapPage: React.FC = () => {
             type: 'raster',
             tiles: satelliteTiles,
             tileSize: 256,
-            attribution: mapboxToken
-              ? '© Mapbox © OpenStreetMap'
-              : '© Esri World Imagery, Maxar, Earthstar Geographics',
+            attribution: 'Esri World Imagery, Maxar, Earthstar Geographics',
             maxzoom: 19,
           },
         },
@@ -471,7 +383,7 @@ export const MapPage: React.FC = () => {
           type: 'raster',
           tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
           tileSize: 256,
-          attribution: '© OpenStreetMap contributors',
+          attribution: 'OpenStreetMap contributors',
           maxzoom: 19,
         },
       },
@@ -487,14 +399,11 @@ export const MapPage: React.FC = () => {
     } as maplibregl.StyleSpecification;
   };
 
-  // Add all GeoJSON Vector Layers to MapLibre
+  // Add Vector Layers with Apple/Google polished styling
   const setupVectorLayers = (map: maplibregl.Map) => {
-    // 1. Boundaries Source & Layers
+    // 1. Boundaries
     if (!map.getSource('src-boundaries')) {
-      map.addSource('src-boundaries', {
-        type: 'geojson',
-        data: boundariesData as any,
-      });
+      map.addSource('src-boundaries', { type: 'geojson', data: boundariesData as any });
 
       map.addLayer({
         id: 'layer-batas-desa-fill',
@@ -502,7 +411,7 @@ export const MapPage: React.FC = () => {
         source: 'src-boundaries',
         paint: {
           'fill-color': '#0F172A',
-          'fill-opacity': 0.05,
+          'fill-opacity': 0.04,
         },
       });
 
@@ -512,14 +421,16 @@ export const MapPage: React.FC = () => {
         source: 'src-boundaries',
         paint: {
           'line-color': '#FFFFFF',
-          'line-width': 2.5,
-          'line-dasharray': [3, 2],
+          'line-width': 1.8,
+          'line-dasharray': [4, 3],
+          'line-opacity': 0.85,
         },
       });
 
       map.on('click', 'layer-batas-desa-fill', (e) => {
         if (!e.features || !e.features[0]) return;
         const p = e.features[0].properties || {};
+        setLayerPanelOpen(false);
         setSelectedFeature({
           title: p.name || 'Batas Administrasi Dusun',
           type: 'Batas Wilayah Administrasi',
@@ -532,12 +443,9 @@ export const MapPage: React.FC = () => {
       });
     }
 
-    // 2. Hazard Source & Layers
+    // 2. Hazard Layer (Translucent refined tones)
     if (!map.getSource('src-hazard')) {
-      map.addSource('src-hazard', {
-        type: 'geojson',
-        data: hazardData as any,
-      });
+      map.addSource('src-hazard', { type: 'geojson', data: hazardData as any });
 
       map.addLayer({
         id: 'layer-bahaya-kekeringan-fill',
@@ -545,7 +453,7 @@ export const MapPage: React.FC = () => {
         source: 'src-hazard',
         paint: {
           'fill-color': ['get', 'color'],
-          'fill-opacity': 0.65,
+          'fill-opacity': 0.4,
         },
       });
 
@@ -555,7 +463,8 @@ export const MapPage: React.FC = () => {
         source: 'src-hazard',
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 2,
+          'line-width': 1.6,
+          'line-opacity': 0.9,
         },
       });
 
@@ -567,19 +476,16 @@ export const MapPage: React.FC = () => {
           type: 'Peta Bahaya Kekeringan (Hazard)',
           status: `Skor Bahaya ${p.score}`,
           dusun: 'Kawasan Desa Kemitir',
-          description: p.description || 'Zona kerawanan kekeringan lereng Gunung Ungaran.',
+          description: p.description || 'Zona kerawanan kekeringan lereng perbukitan Sumowono.',
           hazardClass: p.hazard_class,
           coordinates: [e.lngLat.lng, e.lngLat.lat],
         });
       });
     }
 
-    // 3. Risk Source & Layers
+    // 3. Risk Layer
     if (!map.getSource('src-risk')) {
-      map.addSource('src-risk', {
-        type: 'geojson',
-        data: riskData as any,
-      });
+      map.addSource('src-risk', { type: 'geojson', data: riskData as any });
 
       map.addLayer({
         id: 'layer-risiko-kekeringan-fill',
@@ -587,11 +493,9 @@ export const MapPage: React.FC = () => {
         source: 'src-risk',
         paint: {
           'fill-color': ['get', 'color'],
-          'fill-opacity': 0.6,
+          'fill-opacity': 0.45,
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       map.addLayer({
@@ -600,11 +504,9 @@ export const MapPage: React.FC = () => {
         source: 'src-risk',
         paint: {
           'line-color': '#991B1B',
-          'line-width': 2.5,
+          'line-width': 1.8,
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       map.on('click', 'layer-risiko-kekeringan-fill', (e) => {
@@ -615,19 +517,16 @@ export const MapPage: React.FC = () => {
           type: 'Peta Risiko Kekeringan (Risk)',
           status: `Komposit Risiko ${p.composite_risk}`,
           dusun: 'Kemitir Kidul & Garon',
-          description: `${p.description} Mempengaruhi ${p.affected_kk} Kepala Keluarga.`,
+          description: `${p.description} Mempengaruhi sekitar ${p.affected_kk} Kepala Keluarga.`,
           hazardClass: p.risk_class,
           coordinates: [e.lngLat.lng, e.lngLat.lat],
         });
       });
     }
 
-    // 4. Priority Intervention Source & Layers
+    // 4. Priority Intervention Layer
     if (!map.getSource('src-priority')) {
-      map.addSource('src-priority', {
-        type: 'geojson',
-        data: priorityData as any,
-      });
+      map.addSource('src-priority', { type: 'geojson', data: priorityData as any });
 
       map.addLayer({
         id: 'layer-prioritas-fill',
@@ -635,11 +534,9 @@ export const MapPage: React.FC = () => {
         source: 'src-priority',
         paint: {
           'fill-color': ['get', 'color'],
-          'fill-opacity': 0.55,
+          'fill-opacity': 0.45,
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       map.addLayer({
@@ -648,12 +545,10 @@ export const MapPage: React.FC = () => {
         source: 'src-priority',
         paint: {
           'line-color': '#DC2626',
-          'line-width': 3.5,
-          'line-dasharray': [2, 1],
+          'line-width': 2.2,
+          'line-dasharray': [3, 2],
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       map.on('click', 'layer-prioritas-fill', (e) => {
@@ -671,12 +566,9 @@ export const MapPage: React.FC = () => {
       });
     }
 
-    // 5. Participatory Source & Layers
+    // 5. Participatory Layer
     if (!map.getSource('src-participatory')) {
-      map.addSource('src-participatory', {
-        type: 'geojson',
-        data: participatoryData as any,
-      });
+      map.addSource('src-participatory', { type: 'geojson', data: participatoryData as any });
 
       map.addLayer({
         id: 'layer-peta-partisipatif-area',
@@ -685,11 +577,9 @@ export const MapPage: React.FC = () => {
         filter: ['==', '$type', 'Polygon'],
         paint: {
           'fill-color': '#8B5CF6',
-          'fill-opacity': 0.45,
+          'fill-opacity': 0.35,
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       map.addLayer({
@@ -699,11 +589,9 @@ export const MapPage: React.FC = () => {
         filter: ['==', '$type', 'LineString'],
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 4.5,
+          'line-width': 3.5,
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       map.addLayer({
@@ -712,14 +600,12 @@ export const MapPage: React.FC = () => {
         source: 'src-participatory',
         filter: ['==', '$type', 'Point'],
         paint: {
-          'circle-radius': 9,
-          'circle-color': '#EC4899',
-          'circle-stroke-width': 2.5,
+          'circle-radius': 7,
+          'circle-color': '#A855F7',
+          'circle-stroke-width': 2,
           'circle-stroke-color': '#FFFFFF',
         },
-        layout: {
-          visibility: 'none',
-        },
+        layout: { visibility: 'none' },
       });
 
       const onPartClick = (e: any) => {
@@ -730,7 +616,7 @@ export const MapPage: React.FC = () => {
           type: p.category || 'Peta Partisipatif',
           status: p.condition || p.status || 'Tervalidasi Warga',
           dusun: 'Dusun Kemitir Kidul',
-          description: p.description || 'Data partisipatif hasil pemetaan warga desa.',
+          description: p.description || 'Data partisipatif hasil pemetaan gotong royong warga desa.',
           hazardClass: 'Tinggi',
           coordinates: [e.lngLat.lng, e.lngLat.lat],
         });
@@ -740,14 +626,82 @@ export const MapPage: React.FC = () => {
       map.on('click', 'layer-peta-partisipatif-pipe', onPartClick);
       map.on('click', 'layer-peta-partisipatif-point', onPartClick);
     }
+
+    // 6. Control Points GCP & ICP Layer (Perka BIG No. 15/2014)
+    if (!map.getSource('src-control-points')) {
+      map.addSource('src-control-points', { type: 'geojson', data: controlPointsData as any });
+
+      map.addLayer({
+        id: 'layer-titik-kontrol-circle',
+        type: 'circle',
+        source: 'src-control-points',
+        paint: {
+          'circle-radius': 7,
+          'circle-color': ['match', ['get', 'type'], 'ICP', '#10B981', '#3B82F6'],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#FFFFFF',
+        },
+      });
+
+      map.addLayer({
+        id: 'layer-titik-kontrol-label',
+        type: 'symbol',
+        source: 'src-control-points',
+        layout: {
+          'text-field': ['get', 'id'],
+          'text-size': 11,
+          'text-offset': [0, 1.2],
+          'text-anchor': 'top',
+        },
+        paint: {
+          'text-color': '#0F172A',
+          'text-halo-color': '#FFFFFF',
+          'text-halo-width': 1.5,
+        },
+      });
+
+      map.on('click', 'layer-titik-kontrol-circle', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const p = e.features[0].properties || {};
+        setSelectedFeature({
+          title: `Titik ${p.type}: ${p.id}`,
+          type: 'Uji Geometri Peta Dasar (Perka BIG 15/2014)',
+          status: `Elevasi: ${p.elevation_m} m | Residu 2D: ${p.delta_2d_m} m`,
+          dusun: `UTM 49S: X=${p.easting_utm}, Y=${p.northing_utm}`,
+          description: `Ketelitian terverifikasi GNSS Geodetik: ΔX=${p.delta_x_m}m, ΔY=${p.delta_y_m}m, ΔZ=${p.delta_z_m}m. Standar Kelas 1 Skala 1:1.000 (CE90=0.186m, LE90=1.136m).`,
+          hazardClass: p.type === 'ICP' ? 'Akurasi Tinggi' : 'Titik Kontrol Tanah',
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        });
+      });
+    }
+
+    // Cursor hover behavior
+    const interactiveLayers = [
+      'layer-batas-desa-fill',
+      'layer-bahaya-kekeringan-fill',
+      'layer-risiko-kekeringan-fill',
+      'layer-prioritas-fill',
+      'layer-peta-partisipatif-area',
+      'layer-peta-partisipatif-pipe',
+      'layer-peta-partisipatif-point',
+      'layer-titik-kontrol-circle',
+    ];
+
+    interactiveLayers.forEach((layerId) => {
+      map.on('mouseenter', layerId, () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', layerId, () => {
+        map.getCanvas().style.cursor = '';
+      });
+    });
   };
 
-  // Synchronize Map Layers with React Layer State
+  // Synchronize Map Layers with State
   const syncMapLayers = (map: maplibregl.Map, currentLayers: LayerState[]) => {
     currentLayers.forEach((layer) => {
       const isVisible = layer.active ? 'visible' : 'none';
 
-      // 1. Hazard Layer
       if (layer.slug === 'bahaya-kekeringan') {
         if (map.getLayer('layer-bahaya-kekeringan-fill')) {
           map.setLayoutProperty('layer-bahaya-kekeringan-fill', 'visibility', isVisible);
@@ -758,7 +712,6 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 2. Risk Layer
       if (layer.slug === 'risiko-kekeringan') {
         if (map.getLayer('layer-risiko-kekeringan-fill')) {
           map.setLayoutProperty('layer-risiko-kekeringan-fill', 'visibility', isVisible);
@@ -769,7 +722,6 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 3. Boundaries Layer
       if (layer.slug === 'batas-desa') {
         if (map.getLayer('layer-batas-desa-fill')) {
           map.setLayoutProperty('layer-batas-desa-fill', 'visibility', isVisible);
@@ -779,7 +731,6 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 4. Participatory Layer
       if (layer.slug === 'peta-partisipatif') {
         if (map.getLayer('layer-peta-partisipatif-area')) {
           map.setLayoutProperty('layer-peta-partisipatif-area', 'visibility', isVisible);
@@ -793,7 +744,6 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 5. Priority Layer
       if (layer.slug === 'prioritas') {
         if (map.getLayer('layer-prioritas-fill')) {
           map.setLayoutProperty('layer-prioritas-fill', 'visibility', isVisible);
@@ -804,7 +754,15 @@ export const MapPage: React.FC = () => {
         }
       }
 
-      // 6. Water Sources Marker Pins
+      if (layer.slug === 'titik-kontrol-gcp-icp') {
+        if (map.getLayer('layer-titik-kontrol-circle')) {
+          map.setLayoutProperty('layer-titik-kontrol-circle', 'visibility', isVisible);
+        }
+        if (map.getLayer('layer-titik-kontrol-label')) {
+          map.setLayoutProperty('layer-titik-kontrol-label', 'visibility', isVisible);
+        }
+      }
+
       if (layer.slug === 'sumber-air') {
         markersRef.current.forEach((marker) => {
           const el = marker.getElement();
@@ -824,32 +782,66 @@ export const MapPage: React.FC = () => {
       const map = new maplibregl.Map({
         container: mapContainer.current,
         style: getBasemapStyle(basemap),
-        center: [110.3155, -7.2285], // Center of Desa Kemitir
+        center: [110.3155, -7.2285],
         zoom: 14,
+        pitch: is3D ? 45 : 0,
+        bearing: 0,
+      });
+
+      map.on('rotate', () => {
+        setBearing(map.getBearing());
       });
 
       map.on('load', () => {
+        map.resize();
         setupVectorLayers(map);
         syncMapLayers(map, layers);
       });
+
+      // Handle delayed flexbox layout resolution
+      const resizeTimer = setTimeout(() => {
+        if (mapInstance.current) {
+          mapInstance.current.resize();
+        }
+      }, 150);
+
+      const resizeObserver = new ResizeObserver(() => {
+        if (mapInstance.current) {
+          mapInstance.current.resize();
+        }
+      });
+      resizeObserver.observe(mapContainer.current);
 
       // Clear existing markers
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
 
-      // Add markers for water sources
+      // Water-source markers: the outer element is positioned by MapLibre, so styling and
+      // hover scale live on an inner node. Padding gives a 44px touch target.
       waterSourcePins.forEach((feat) => {
-        const el = document.createElement('div');
-        el.className =
-          'w-8 h-8 rounded-full border-[2.5px] border-white flex items-center justify-center cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.25)] transition-all duration-200 hover:scale-125 z-10';
-        el.style.backgroundColor = feat.color;
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'group p-1.5 -m-1.5 bg-transparent border-0 cursor-pointer';
+        el.setAttribute('aria-label', `${feat.title}, debit ${feat.debit}`);
 
-        const innerDot = document.createElement('div');
-        innerDot.className = 'w-3 h-3 rounded-full bg-white shadow-xs';
-        el.appendChild(innerDot);
+        el.innerHTML = `
+          <span class="relative flex flex-col items-center transition-transform duration-150 group-hover:scale-110 group-active:scale-95 origin-bottom">
+            <span class="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center border-2 border-white shadow-lg">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            </span>
+            <span class="w-2 h-2 bg-sky-600 rotate-45 -mt-1 border-r-2 border-b-2 border-white"></span>
+          </span>
+        `;
+
+        const label = document.createElement('span');
+        label.className =
+          'hidden sm:block absolute left-1/2 -translate-x-1/2 top-full mt-0.5 bg-slate-900 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity pointer-events-none';
+        label.textContent = feat.title;
+        el.appendChild(label);
 
         el.addEventListener('click', (ev) => {
           ev.stopPropagation();
+          setLayerPanelOpen(false);
           setSelectedFeature({
             title: feat.title,
             type: feat.type,
@@ -863,7 +855,7 @@ export const MapPage: React.FC = () => {
           map.flyTo({ center: feat.coords, zoom: 15.5, duration: 800 });
         });
 
-        const marker = new maplibregl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat(feat.coords)
           .addTo(map);
 
@@ -873,57 +865,42 @@ export const MapPage: React.FC = () => {
       mapInstance.current = map;
 
       return () => {
+        clearTimeout(resizeTimer);
+        resizeObserver.disconnect();
         map.remove();
       };
     } catch (e) {
-      console.warn('MapLibre GL initialization error:', e);
+      console.warn('MapLibre GL error:', e);
     }
   }, [basemap, mapboxToken]);
 
-  // Sync Layers whenever `layers` state changes
+  // Synchronize layers when state updates
   useEffect(() => {
     if (!mapInstance.current || !mapInstance.current.isStyleLoaded()) return;
     syncMapLayers(mapInstance.current, layers);
   }, [layers]);
 
-  // Adjust active layers when thematic filter changes from URL or pill click
+  // Thematic filter pills
   const setThematicFilter = (mode: string) => {
     setSearchParams({ mode });
 
     setLayers((prev) =>
       prev.map((l) => {
-        if (mode === 'all') {
-          return { ...l, active: true };
-        }
+        if (mode === 'all') return { ...l, active: true };
         if (mode === 'hazard' || mode === 'bahaya-kekeringan') {
-          return {
-            ...l,
-            active: l.category === 'hazard' || l.category === 'base',
-          };
+          return { ...l, active: l.category === 'hazard' || l.category === 'base' };
         }
         if (mode === 'risk' || mode === 'risiko-kekeringan') {
-          return {
-            ...l,
-            active: l.category === 'risk' || l.category === 'base',
-          };
+          return { ...l, active: l.category === 'risk' || l.category === 'base' };
         }
         if (mode === 'water' || mode === 'sumber-air') {
-          return {
-            ...l,
-            active: l.category === 'water' || l.category === 'base',
-          };
+          return { ...l, active: l.category === 'water' || l.category === 'base' };
         }
         if (mode === 'participatory' || mode === 'peta-partisipatif') {
-          return {
-            ...l,
-            active: l.category === 'participatory' || l.category === 'base',
-          };
+          return { ...l, active: l.category === 'participatory' || l.category === 'base' };
         }
         if (mode === 'priority' || mode === 'prioritas') {
-          return {
-            ...l,
-            active: l.category === 'priority' || l.category === 'base',
-          };
+          return { ...l, active: l.category === 'priority' || l.category === 'base' };
         }
         return l;
       })
@@ -931,27 +908,23 @@ export const MapPage: React.FC = () => {
 
     if (mapInstance.current) {
       if (mode === 'hazard' || mode === 'bahaya-kekeringan') {
-        mapInstance.current.flyTo({ center: [110.3165, -7.2285], zoom: 14.2 });
+        mapInstance.current.flyTo({ center: [110.3165, -7.2285], zoom: 14.2, duration: 800 });
       } else if (mode === 'water' || mode === 'sumber-air') {
-        mapInstance.current.flyTo({ center: [110.3155, -7.2280], zoom: 14.8 });
+        mapInstance.current.flyTo({ center: [110.3155, -7.2280], zoom: 14.8, duration: 800 });
       } else if (mode === 'participatory') {
-        mapInstance.current.flyTo({ center: [110.3195, -7.2315], zoom: 15.0 });
+        mapInstance.current.flyTo({ center: [110.3195, -7.2315], zoom: 15.0, duration: 800 });
       } else if (mode === 'priority') {
-        mapInstance.current.flyTo({ center: [110.3175, -7.2325], zoom: 15.2 });
+        mapInstance.current.flyTo({ center: [110.3175, -7.2325], zoom: 15.2, duration: 800 });
       }
     }
   };
 
   const toggleLayer = (slug: string) => {
-    setLayers((prev) =>
-      prev.map((l) => (l.slug === slug ? { ...l, active: !l.active } : l))
-    );
+    setLayers((prev) => prev.map((l) => (l.slug === slug ? { ...l, active: !l.active } : l)));
   };
 
   const updateOpacity = (slug: string, opacity: number) => {
-    setLayers((prev) =>
-      prev.map((l) => (l.slug === slug ? { ...l, opacity } : l))
-    );
+    setLayers((prev) => prev.map((l) => (l.slug === slug ? { ...l, opacity } : l)));
   };
 
   const resetMapCenter = () => {
@@ -961,21 +934,29 @@ export const MapPage: React.FC = () => {
         zoom: 14,
         pitch: 0,
         bearing: 0,
-        duration: 900,
+        duration: 800,
+      });
+      setIs3D(false);
+    }
+  };
+
+  const toggle3D = () => {
+    if (mapInstance.current) {
+      const next3D = !is3D;
+      setIs3D(next3D);
+      mapInstance.current.easeTo({
+        pitch: next3D ? 50 : 0,
+        duration: 600,
       });
     }
   };
 
   const zoomIn = () => {
-    if (mapInstance.current) {
-      mapInstance.current.zoomIn();
-    }
+    if (mapInstance.current) mapInstance.current.zoomIn({ duration: 300 });
   };
 
   const zoomOut = () => {
-    if (mapInstance.current) {
-      mapInstance.current.zoomOut();
-    }
+    if (mapInstance.current) mapInstance.current.zoomOut({ duration: 300 });
   };
 
   const handleGeolocation = () => {
@@ -986,493 +967,622 @@ export const MapPage: React.FC = () => {
             mapInstance.current.flyTo({
               center: [pos.coords.longitude, pos.coords.latitude],
               zoom: 16,
-              duration: 1000,
+              duration: 900,
             });
           }
         },
-        (err) => {
-          alert('Izin lokasi tidak diberikan atau perangkat di luar jangkauan GPS.');
+        () => {
+          alert('Izin lokasi GPS tidak diberikan atau perangkat di luar jangkauan satelit.');
         },
         { enableHighAccuracy: true }
       );
     }
   };
 
+  const handleSelectSearchResult = (item: SearchItem) => {
+    if (item.id.startsWith('inf-')) {
+      setLayers((prev) => prev.map((l) => (l.slug === 'peta-partisipatif' ? { ...l, active: true } : l)));
+    } else if (item.id.startsWith('haz-')) {
+      setLayers((prev) =>
+        prev.map((l) => (l.slug === 'prioritas' || l.slug === 'bahaya-kekeringan' ? { ...l, active: true } : l))
+      );
+    } else if (item.id.startsWith('ws-')) {
+      setLayers((prev) => prev.map((l) => (l.slug === 'sumber-air' ? { ...l, active: true } : l)));
+    }
+
+    if (mapInstance.current) {
+      mapInstance.current.flyTo({
+        center: item.coordinates,
+        zoom: 16.5,
+        pitch: 35,
+        bearing: 0,
+        duration: 900,
+      });
+    }
+
+    setSelectedFeature({
+      title: item.name,
+      type: item.categoryLabel,
+      status: item.status,
+      dusun: item.dusun,
+      description: item.description,
+      debit: item.debit,
+      hazardClass: item.hazardClass,
+      coordinates: item.coordinates,
+    });
+
+    setSearchDropdownOpen(false);
+    setLayerPanelOpen(false);
+  };
+
+  const copyCoordinates = (coords: [number, number]) => {
+    navigator.clipboard.writeText(`${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}`);
+    setCopiedCoord(true);
+    setTimeout(() => setCopiedCoord(false), 2000);
+  };
+
   const openInGoogleMaps = (lng: number, lat: number) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
   };
 
+  const searchResults = searchQuery.trim()
+    ? searchableFeatures.filter((item) => {
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          item.name.toLowerCase().includes(q) ||
+          item.dusun.toLowerCase().includes(q) ||
+          item.categoryLabel.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          item.status.toLowerCase().includes(q)
+        );
+      })
+    : [];
+
   const activeLayerCount = layers.filter((l) => l.active).length;
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem)] sm:h-[calc(100vh-4.5rem)] overflow-hidden bg-slate-900 select-none">
-      {/* 1. Map Canvas (Full Bleed Viewport) */}
-      <div ref={mapContainer} className="w-full h-full relative" />
+    <div className="relative w-full h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] flex-1 min-h-0 overflow-hidden bg-slate-900 select-none">
+      {/* 1. Map Canvas (Full Viewport Immersion) */}
+      <div ref={mapContainer} className="absolute inset-0 w-full h-full" role="region" aria-label="Peta interaktif Desa Kemitir" />
 
-      {/* 2. Top Apple Floating Control Bar */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Search Box & Layer Panel Trigger */}
-        <div className="flex items-center gap-2.5 pointer-events-auto">
-          {/* Search Box with Autocomplete Dropdown */}
-          <div ref={searchContainerRef} className="relative">
-            <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 px-3.5 h-11 flex items-center gap-2.5 shadow-md w-60 sm:w-80 transition-all focus-within:ring-2 focus-within:ring-emerald-500">
-              <Search className="w-4 h-4 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSearchDropdownOpen(true);
+      {/* 2. Floating Search & Thematic Filter Chips Bar (Google & Apple Maps standard) */}
+      <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-[4.25rem] sm:right-auto w-auto sm:max-w-xl md:max-w-2xl z-20 pointer-events-none flex flex-col gap-2">
+        {/* Search Input Box */}
+        <div ref={searchContainerRef} className="relative pointer-events-auto sm:w-[420px]">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 pl-3.5 pr-1 min-h-[44px] flex items-center gap-2.5 shadow-md shadow-slate-900/5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-all">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input
+              type="search"
+              aria-label="Cari lokasi di peta"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchDropdownOpen(true);
+              }}
+              onFocus={() => setSearchDropdownOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchResults.length > 0) {
+                  handleSelectSearchResult(searchResults[0]);
+                } else if (e.key === 'Escape') {
+                  setSearchDropdownOpen(false);
+                }
+              }}
+              placeholder="Cari mata air, dusun, pipa..."
+              className="w-full min-w-0 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent [&::-webkit-search-cancel-button]:hidden"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchDropdownOpen(false);
                 }}
-                onFocus={() => setSearchDropdownOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    if (searchResults.length > 0) {
-                      handleSelectSearchResult(searchResults[0]);
-                    }
-                  } else if (e.key === 'Escape') {
-                    setSearchDropdownOpen(false);
-                  }
-                }}
-                placeholder="Cari mata air, dusun, pipa..."
-                className="w-full text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchDropdownOpen(false);
-                  }}
-                  className="text-slate-400 hover:text-slate-600 p-0.5"
-                  aria-label="Hapus pencarian"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Live Autocomplete Dropdown */}
-            {searchDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 w-80 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-2xl border border-slate-200/90 shadow-2xl p-2 z-50 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-100">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    {searchQuery.trim()
-                      ? `Hasil Pencarian (${searchResults.length})`
-                      : 'Rekomendasi Pencarian'}
-                  </span>
-                  <button
-                    onClick={() => setSearchDropdownOpen(false)}
-                    className="text-slate-400 hover:text-slate-600 text-xs p-1"
-                    aria-label="Tutup Hasil"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="mt-1 divide-y divide-slate-100">
-                  {(searchQuery.trim() ? searchResults : searchableFeatures.slice(0, 6)).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleSelectSearchResult(item)}
-                      className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 transition-colors flex items-start gap-2.5 group"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center shrink-0 transition-colors mt-0.5">
-                        {item.categoryLabel.includes('Mata Air') || item.categoryLabel.includes('Sumur') ? (
-                          <Droplets className="w-4 h-4" />
-                        ) : item.categoryLabel.includes('Dusun') || item.categoryLabel.includes('Pemerintahan') ? (
-                          <MapPin className="w-4 h-4" />
-                        ) : item.categoryLabel.includes('Pipa') || item.categoryLabel.includes('Tandon') ? (
-                          <Activity className="w-4 h-4" />
-                        ) : (
-                          <ShieldAlert className="w-4 h-4" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
-                            {item.name}
-                          </span>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            {item.categoryLabel}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">{item.dusun}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
-                            {item.status}
-                          </span>
-                          {item.debit && (
-                            <span className="text-[10px] text-blue-700 font-medium bg-blue-50 px-1.5 py-0.5 rounded">
-                              {item.debit}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-
-                  {searchQuery.trim() && searchResults.length === 0 && (
-                    <div className="p-4 text-center">
-                      <p className="text-xs font-semibold text-slate-700">
-                        Tidak ditemukan hasil untuk "{searchQuery}"
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Coba kata kunci: Tuk Mulyo, Sumur Bor, Garon, Pipa, atau Dusun.
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 justify-center mt-3">
-                        {['Tuk Mulyo', 'Sumur Bor', 'Kemitir Kidul', 'Embung Garon', 'Pipa'].map((kw) => (
-                          <button
-                            key={kw}
-                            onClick={() => {
-                              setSearchQuery(kw);
-                              setSearchDropdownOpen(true);
-                            }}
-                            className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg text-slate-700 font-medium transition-colors"
-                          >
-                            {kw}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                className="shrink-0 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Hapus kata kunci"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
             )}
           </div>
 
-          {/* Single Layer Panel Trigger Button */}
-          <button
-            onClick={() => setLayerPanelOpen(!layerPanelOpen)}
-            className={`h-11 px-4 rounded-2xl border flex items-center gap-2 text-sm font-bold shadow-md transition-all ${layerPanelOpen
-                ? 'bg-slate-900 text-white border-transparent'
-                : 'bg-white/95 backdrop-blur-xl text-slate-800 border-slate-200/90 hover:bg-slate-50'
-              }`}
-            aria-label="Buka Opsi Layer Peta"
-          >
-            <Sliders className={`w-4 h-4 ${layerPanelOpen ? 'text-emerald-400' : 'text-emerald-600'}`} />
-            <span>Layer Peta</span>
-            <span
-              className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${layerPanelOpen ? 'bg-emerald-500 text-slate-950' : 'bg-emerald-600 text-white'
-                }`}
-            >
-              {activeLayerCount}
-            </span>
-          </button>
-        </div>
-
-        {/* Right: Basemap Switcher Pill */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 p-1 flex items-center gap-1 shadow-md pointer-events-auto">
-          <button
-            onClick={() => setBasemap('satellite')}
-            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${basemap === 'satellite'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-              }`}
-          >
-            Satelit
-          </button>
-          <button
-            onClick={() => setBasemap('streets')}
-            className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${basemap === 'streets'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-              }`}
-          >
-            Peta Jalan
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Apple-Grade Layer Management Sheet */}
-      {layerPanelOpen && (
-        <div className="absolute top-20 left-4 z-30 w-80 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-2xl max-h-[calc(100vh-6.5rem)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Header */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                <Sliders className="w-4 h-4" />
+          {/* Autocomplete Dropdown */}
+          {searchDropdownOpen && (
+            <div className="absolute top-full mt-1.5 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-xl p-1.5 z-50 max-h-[50dvh] overflow-y-auto overscroll-contain">
+              <div className="px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                {searchQuery.trim() ? `Hasil Pencarian (${searchResults.length})` : 'Rekomendasi Pencarian'}
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 leading-tight">
-                  Layer & Data Spasial
-                </h3>
-                <p className="text-[11px] text-slate-500 font-medium">
-                  Pilihan tematik & transparansi layer
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setLayerPanelOpen(false)}
-              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
-              title="Tutup Panel Layer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
 
-          {/* Quick Thematic Preset Filter (Restored & elevated to match original feature) */}
-          <div className="p-3 border-b border-slate-100 bg-slate-50/70 shrink-0">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-              Pilihan Cepat / Mode Tematik
-            </span>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { id: 'all', label: 'Semua', color: 'bg-slate-900 text-white' },
-                { id: 'hazard', label: 'Bahaya', color: 'bg-amber-600 text-white' },
-                { id: 'risk', label: 'Risiko', color: 'bg-rose-600 text-white' },
-                { id: 'water', label: 'Sumber Air', color: 'bg-blue-600 text-white' },
-                { id: 'participatory', label: 'Partisipatif', color: 'bg-purple-600 text-white' },
-                { id: 'priority', label: 'Prioritas', color: 'bg-red-700 text-white' },
-              ].map((preset) => {
-                const isActive =
-                  activeModeParam === preset.id ||
-                  (preset.id === 'all' && (!activeModeParam || activeModeParam === 'all')) ||
-                  (preset.id === 'hazard' && activeModeParam === 'bahaya-kekeringan') ||
-                  (preset.id === 'risk' && activeModeParam === 'risiko-kekeringan') ||
-                  (preset.id === 'water' && activeModeParam === 'sumber-air') ||
-                  (preset.id === 'participatory' && activeModeParam === 'peta-partisipatif') ||
-                  (preset.id === 'priority' && activeModeParam === 'prioritas');
-
-                return (
+              <div className="mt-1 space-y-0.5">
+                {(searchQuery.trim() ? searchResults : searchableFeatures.slice(0, 5)).map((item) => (
                   <button
-                    key={preset.id}
-                    onClick={() => setThematicFilter(preset.id)}
-                    className={`py-1.5 px-2 text-xs font-bold rounded-xl transition-all text-center ${
-                      isActive
-                        ? `${preset.color} shadow-xs scale-102`
-                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Scrollable Layer Switches */}
-          <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1">
-            {layers.map((layer) => (
-              <div
-                key={layer.id}
-                className={`p-3 rounded-2xl border transition-all ${layer.active
-                    ? 'bg-white border-slate-200/90 shadow-xs'
-                    : 'bg-slate-50/60 border-transparent opacity-65'
-                  }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: layer.color }}
-                    />
-                    <div>
-                      <span className="font-bold text-slate-900 text-sm block leading-snug">
-                        {layer.title}
-                      </span>
-                      <span className="text-[11px] text-slate-500 block leading-tight">
-                        {layer.description}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Apple iOS Toggle Switch */}
-                  <button
+                    key={item.id}
+                    onClick={() => handleSelectSearchResult(item)}
                     type="button"
-                    onClick={() => toggleLayer(layer.slug)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${layer.active ? 'bg-emerald-600' : 'bg-slate-300'
-                      }`}
-                    aria-pressed={layer.active}
+                    className="w-full text-left p-2.5 min-h-[48px] rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-3 group"
                   >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${layer.active ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Opacity slider with clean text and zero clipping */}
-                {layer.active && (
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 px-0.5">
-                    <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                      <span>Transparansi / Opasitas</span>
-                      <span className="font-bold text-slate-900">
-                        {Math.round(layer.opacity * 100)}%
-                      </span>
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                      {item.categoryLabel.includes('Mata Air') || item.categoryLabel.includes('Sumur') ? (
+                        <Droplets className="w-3.5 h-3.5" />
+                      ) : item.categoryLabel.includes('Dusun') ? (
+                        <MapPin className="w-3.5 h-3.5" />
+                      ) : item.categoryLabel.includes('Pipa') ? (
+                        <Activity className="w-3.5 h-3.5" />
+                      ) : (
+                        <ShieldAlert className="w-3.5 h-3.5" />
+                      )}
                     </div>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="1"
-                      step="0.05"
-                      value={layer.opacity}
-                      onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                          {item.name}
+                        </span>
+                        <span className="hidden min-[400px]:inline text-[11px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
+                          {item.categoryLabel}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">{item.dusun}</p>
+                    </div>
+                  </button>
+                ))}
+
+                {searchQuery.trim() && searchResults.length === 0 && (
+                  <div className="p-4 text-center text-xs text-slate-500">
+                    Tidak ditemukan data untuk "{searchQuery}".
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-
-          {/* Legend Footer */}
-          <div className="p-3.5 border-t border-slate-100 bg-slate-50/90 rounded-b-3xl shrink-0">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-              Legenda Zona Bahaya / Risiko
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#22C55E]" />
-                <span>Rendah (Aman)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#EAB308]" />
-                <span>Sedang (Waspada)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#F97316]" />
-                <span>Tinggi (Siaga)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#EF4444]" />
-                <span>Sangat Tinggi (Darurat)</span>
-              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* 4. Bottom-Right Apple Map Navigation Pill (Single Unified Island) */}
-      <div className="absolute bottom-6 right-6 z-10 flex flex-col items-center bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl p-1 select-none">
-        <button
-          onClick={resetMapCenter}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
-          title="Pusatkan Peta (Desa Kemitir)"
-        >
-          <Compass className="w-5 h-5 text-emerald-700" />
-        </button>
+        {/* Floating Category Filter Chips (Apple & Google Maps standard) */}
+        <div className="flex items-center gap-2 overflow-x-auto pointer-events-auto py-1 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x">
+          {[
+            { id: 'all', label: 'Semua', icon: Layers, color: 'text-slate-500' },
+            { id: 'water', label: 'Sumber Air', icon: Droplets, color: 'text-sky-500' },
+            { id: 'hazard', label: 'Bahaya', icon: AlertTriangle, color: 'text-amber-500' },
+            { id: 'risk', label: 'Risiko', icon: ShieldAlert, color: 'text-rose-500' },
+            { id: 'priority', label: 'Prioritas', icon: Flame, color: 'text-red-500' },
+            { id: 'participatory', label: 'Pipa Warga', icon: Activity, color: 'text-purple-500' },
+          ].map((chip) => {
+            const Icon = chip.icon;
+            const isActive =
+              activeModeParam === chip.id ||
+              (chip.id === 'all' && (!activeModeParam || activeModeParam === 'all')) ||
+              (chip.id === 'hazard' && activeModeParam === 'bahaya-kekeringan') ||
+              (chip.id === 'risk' && activeModeParam === 'risiko-kekeringan') ||
+              (chip.id === 'water' && activeModeParam === 'sumber-air') ||
+              (chip.id === 'participatory' && activeModeParam === 'peta-partisipatif') ||
+              (chip.id === 'priority' && activeModeParam === 'prioritas');
 
-        <button
-          onClick={handleGeolocation}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
-          title="Lokasi GPS Saya"
-        >
-          <Crosshair className="w-5 h-5 text-blue-600" />
-        </button>
-
-        <div className="w-7 h-[1px] bg-slate-200 my-1" />
-
-        <button
-          onClick={zoomIn}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
-          title="Perbesar Peta"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-
-        <button
-          onClick={zoomOut}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
-          title="Perkecil Peta"
-        >
-          <Minus className="w-5 h-5" />
-        </button>
+            return (
+              <button
+                type="button"
+                key={chip.id}
+                aria-pressed={isActive}
+                onClick={() => setThematicFilter(chip.id)}
+                className={`group shrink-0 min-h-[40px] sm:min-h-[36px] px-3.5 sm:px-3 rounded-full text-xs sm:text-[13px] font-medium whitespace-nowrap transition-all flex items-center gap-1.5 active:scale-95 ${
+                  isActive
+                    ? 'bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-900/15 ring-2 ring-emerald-500/25 font-semibold'
+                    : 'bg-white/95 backdrop-blur-md text-slate-700 hover:text-slate-900 hover:bg-white border border-slate-200/90 shadow-sm'
+                }`}
+              >
+                <Icon
+                  className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110 ${
+                    isActive ? 'text-white' : chip.color
+                  }`}
+                  aria-hidden="true"
+                />
+                <span>{chip.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* 5. Apple Right Inspection Sheet (Detail Fitur yang Dipilih) */}
-      {selectedFeature && (
-        <div className="absolute top-20 right-4 z-30 w-80 sm:w-96 bg-white/98 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-2xl p-6 space-y-4 max-h-[calc(100vh-6.5rem)] overflow-y-auto animate-in slide-in-from-right-4 duration-200">
-          <div className="flex items-start justify-between border-b border-slate-100 pb-3.5">
-            <div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80 mb-1.5">
-                <Sparkles className="w-3 h-3 text-emerald-600" />
-                <span>{selectedFeature.type}</span>
-              </span>
-              <h3 className="text-lg font-bold text-slate-900 leading-snug">
-                {selectedFeature.title}
-              </h3>
-            </div>
+      {/* 3. Floating Action Controls (Right Side - Apple & Google Maps standard) */}
+      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex flex-col items-end gap-2 pointer-events-none">
+        {/* Layer FAB Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setLayerPanelOpen((open) => !open);
+            setSelectedFeature(null);
+          }}
+          aria-expanded={layerPanelOpen}
+          className={`min-h-[44px] min-w-[44px] px-3 sm:px-3.5 rounded-2xl border flex items-center justify-center gap-2 text-sm font-semibold shadow-md transition-colors pointer-events-auto ${
+            layerPanelOpen
+              ? 'bg-slate-900 text-white border-slate-900'
+              : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
+          }`}
+          aria-label="Pengaturan lapisan peta"
+        >
+          <Layers className={`w-5 h-5 ${layerPanelOpen ? 'text-emerald-400' : 'text-emerald-600'}`} aria-hidden="true" />
+          <span className="hidden sm:inline">Lapisan</span>
+          <span className="hidden sm:flex min-w-5 h-5 px-1 rounded-full bg-emerald-600 text-white text-[11px] items-center justify-center font-semibold">
+            {activeLayerCount}
+          </span>
+        </button>
+
+        {/* Navigation Control Stack */}
+        <div className={`bg-white border border-slate-300 rounded-2xl shadow-md p-0.5 flex-col items-center pointer-events-auto ${selectedFeature || layerPanelOpen ? 'hidden sm:flex' : 'flex'}`}>
+          {/* Compass with dynamic rotation */}
+          <button
+            type="button"
+            onClick={resetMapCenter}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Arah Utara & Pusat Peta"
+            aria-label="Pusatkan Peta"
+          >
+            <Compass
+              className="w-5 h-5 text-emerald-700 transition-transform duration-200"
+              style={{ transform: `rotate(${-bearing}deg)` }}
+            />
+          </button>
+
+          {/* 3D Isometric Pitch Toggle */}
+          <button
+            type="button"
+            aria-pressed={is3D}
+            onClick={toggle3D}
+            className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold transition-colors ${
+              is3D ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100'
+            }`}
+            title="Tampilan Perspektif 3D / 2D"
+            aria-label="Ubah Tampilan 3D"
+          >
+            <Box className="w-5 h-5" aria-hidden="true" />
+          </button>
+
+          {/* Geolocation */}
+          <button
+            type="button"
+            onClick={handleGeolocation}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Lokasi GPS Saya"
+            aria-label="Lokasi GPS Saya"
+          >
+            <Crosshair className="w-5 h-5 text-blue-600" aria-hidden="true" />
+          </button>
+
+          {/* Metadata Uji Akurasi BIG & Sensor UAV */}
+          <button
+            type="button"
+            onClick={() => setAccuracyModalOpen(true)}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Metadata Akurasi Peta (Perka BIG) & Sensor UAV"
+            aria-label="Metadata Akurasi Peta"
+          >
+            <ShieldCheck className="w-5 h-5 text-emerald-600" aria-hidden="true" />
+          </button>
+
+          <div className="w-6 h-px bg-slate-200 my-0.5" />
+
+          {/* Zoom In & Out */}
+          <button
+            type="button"
+            onClick={zoomIn}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Perbesar Peta"
+            aria-label="Perbesar"
+          >
+            <Plus className="w-5 h-5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={zoomOut}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Perkecil Peta"
+            aria-label="Perkecil"
+          >
+            <Minus className="w-5 h-5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Layer sheet: bottom sheet on phones, floating popover from sm up */}
+      {layerPanelOpen && (
+        <div
+          role="dialog"
+          aria-label="Pengaturan lapisan spasial"
+          className="absolute z-30 inset-x-0 bottom-0 sm:inset-x-auto sm:bottom-auto sm:top-[4.5rem] sm:right-4 sm:w-96 bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-h-[80dvh] sm:max-h-[calc(100dvh-6.5rem)] flex flex-col"
+        >
+          <div className="sm:hidden flex justify-center pt-2.5" aria-hidden="true">
+            <div className="w-9 h-1 rounded-full bg-slate-300" />
+          </div>
+
+          <div className="px-4 pt-2 sm:pt-4 pb-2 sm:pb-3 border-b border-slate-100 flex items-center justify-between gap-3 shrink-0">
+            <h2 className="text-base font-bold text-slate-900">Lapisan Peta</h2>
             <button
-              onClick={() => setSelectedFeature(null)}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Tutup Detail"
+              type="button"
+              onClick={() => setLayerPanelOpen(false)}
+              className="w-11 h-11 -mr-2 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors"
+              aria-label="Tutup panel lapisan"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
 
-          <div className="space-y-3.5 text-sm">
-            <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-              <span className="text-xs text-slate-500 font-medium">Status Operasional</span>
-              <StatusChip
-                label={selectedFeature.status}
-                status={selectedFeature.status.includes('Aktif') ? 'valid' : 'pending'}
-              />
-            </div>
-
-            {selectedFeature.hazardClass && (
-              <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                <span className="text-xs text-slate-500 font-medium">Tingkat Kerawanan</span>
-                <span
-                  className={`font-bold text-xs uppercase px-2.5 py-1 rounded-full ${selectedFeature.hazardClass === 'Rendah'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : selectedFeature.hazardClass === 'Sedang'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-rose-100 text-rose-800'
+          <div className="p-4 overflow-y-auto overscroll-contain space-y-5 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div>
+              <h3 className="text-xs font-semibold text-slate-500 mb-2">Peta dasar</h3>
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Peta dasar">
+                {[
+                  { id: 'satellite' as const, title: 'Satelit', source: 'Esri / Maxar' },
+                  { id: 'streets' as const, title: 'Peta Jalan', source: 'OpenStreetMap' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={basemap === opt.id}
+                    onClick={() => setBasemap(opt.id)}
+                    className={`min-h-[56px] px-3 py-2 rounded-2xl border text-left transition-colors ${
+                      basemap === opt.id
+                        ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
+                        : 'border-slate-300 hover:bg-slate-50'
                     }`}
-                >
-                  {selectedFeature.hazardClass}
+                  >
+                    <span className="text-sm font-semibold text-slate-900 block">{opt.title}</span>
+                    <span className="text-xs text-slate-600">{opt.source}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold text-slate-500 mb-2">Data tematik</h3>
+              <ul className="space-y-2">
+                {layers.map((layer) => (
+                  <li
+                    key={layer.id}
+                    className={`rounded-2xl border px-3 py-1 transition-colors ${
+                      layer.active ? 'bg-white border-slate-300' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0 py-2">
+                        <span
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: layer.color }}
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0">
+                          <span id={`layer-label-${layer.id}`} className="text-sm font-semibold text-slate-900 block leading-tight">
+                            {layer.title}
+                          </span>
+                          <span className="text-xs text-slate-600 block mt-0.5 leading-snug">
+                            {layer.description}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 44px hit area around a 24x44 visual track */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={layer.active}
+                        aria-labelledby={`layer-label-${layer.id}`}
+                        onClick={() => toggleLayer(layer.slug)}
+                        className="shrink-0 w-14 min-h-[44px] flex items-center justify-center rounded-full"
+                      >
+                        <span
+                          className={`relative inline-flex h-7 w-12 rounded-full transition-colors duration-200 ${
+                            layer.active ? 'bg-emerald-600' : 'bg-slate-400'
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ${
+                              layer.active ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </span>
+                      </button>
+                    </div>
+
+                    {layer.active && layer.slug !== 'sumber-air' && (
+                      <div className="border-t border-slate-100 flex items-center justify-between gap-3 text-xs text-slate-600 min-h-[44px]">
+                        <label htmlFor={`opacity-${layer.id}`}>Transparansi</label>
+                        <div className="flex items-center gap-2 flex-1 max-w-[180px]">
+                          <input
+                            id={`opacity-${layer.id}`}
+                            type="range"
+                            min="0.1"
+                            max="1"
+                            step="0.05"
+                            value={layer.opacity}
+                            onChange={(e) => updateOpacity(layer.slug, parseFloat(e.target.value))}
+                            className="w-full h-6 cursor-pointer accent-emerald-600"
+                          />
+                          <span className="font-semibold text-slate-800 w-9 text-right tabular-nums">
+                            {Math.round(layer.opacity * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100">
+              <h3 className="text-xs font-semibold text-slate-500 mb-2">Legenda tingkat kerawanan</h3>
+              <ul className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs font-medium text-slate-700">
+                {[
+                  ['bg-emerald-500', 'Rendah (Aman)'],
+                  ['bg-amber-500', 'Sedang (Waspada)'],
+                  ['bg-orange-500', 'Tinggi (Siaga)'],
+                  ['bg-rose-600', 'Sangat Tinggi (Darurat)'],
+                ].map(([color, label]) => (
+                  <li key={label} className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} aria-hidden="true" />
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Feature sheet: bottom sheet on phones, floating card from sm up */}
+      {selectedFeature && (
+        <div
+          role="dialog"
+          aria-label={`Detail ${selectedFeature.title}`}
+          className="absolute z-30 inset-x-0 bottom-0 sm:inset-x-auto sm:bottom-auto sm:top-[4.5rem] sm:right-4 sm:w-96 bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-h-[70dvh] sm:max-h-[calc(100dvh-6.5rem)] flex flex-col"
+        >
+          <div className="sm:hidden flex justify-center pt-2.5" aria-hidden="true">
+            <div className="w-9 h-1 rounded-full bg-slate-300" />
+          </div>
+
+          <div className="p-4 sm:p-5 flex-1 overflow-y-auto overscroll-contain space-y-3.5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block mb-1.5">
+                  {selectedFeature.type}
                 </span>
+                <h2 className="text-lg font-bold text-slate-900 leading-snug">{selectedFeature.title}</h2>
+                <div className="flex items-start gap-1.5 text-sm text-slate-600 mt-1">
+                  <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span>{selectedFeature.dusun}</span>
+                </div>
               </div>
-            )}
-
-            {selectedFeature.debit && (
-              <div className="flex items-center justify-between bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                <span className="text-xs text-slate-500 font-medium">Kapasitas / Debit Air</span>
-                <span className="font-bold text-slate-900">{selectedFeature.debit}</span>
-              </div>
-            )}
-
-            <div>
-              <span className="text-xs text-slate-500 font-semibold block mb-1">
-                Lokasi Wilayah
-              </span>
-              <div className="flex items-center gap-2 text-slate-900 font-medium">
-                <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{selectedFeature.dusun}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedFeature(null)}
+                className="w-11 h-11 -mt-1 -mr-2 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors shrink-0"
+                aria-label="Tutup detail fitur"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
             </div>
 
-            <div>
-              <span className="text-xs text-slate-500 font-semibold block mb-1">
-                Informasi & Analisis Bencana
-              </span>
-              <p className="text-slate-700 leading-relaxed bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100 text-xs font-normal">
-                {selectedFeature.description}
-              </p>
-            </div>
+            <dl className="grid grid-cols-2 gap-2">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                <dt className="text-xs text-slate-600">Status</dt>
+                <dd className="text-sm font-semibold text-slate-900 mt-0.5">{selectedFeature.status}</dd>
+              </div>
+              {selectedFeature.debit ? (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <dt className="text-xs text-slate-600">Debit / Kapasitas</dt>
+                  <dd className="text-sm font-semibold text-blue-700 mt-0.5">{selectedFeature.debit}</dd>
+                </div>
+              ) : selectedFeature.hazardClass ? (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <dt className="text-xs text-slate-600">Tingkat Kerawanan</dt>
+                  <dd className="text-sm font-semibold text-orange-700 mt-0.5">{selectedFeature.hazardClass}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            <p className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-sm text-slate-700 leading-relaxed">
+              {selectedFeature.description}
+            </p>
 
             {selectedFeature.coordinates && (
-              <div className="pt-2">
+              <div className="space-y-2">
                 <Button
                   variant="brand"
                   size="md"
-                  className="w-full gap-2 font-semibold shadow-md"
-                  onClick={() =>
-                    openInGoogleMaps(
-                      selectedFeature.coordinates![0],
-                      selectedFeature.coordinates![1]
-                    )
-                  }
+                  className="w-full"
+                  onClick={() => openInGoogleMaps(selectedFeature.coordinates![0], selectedFeature.coordinates![1])}
                 >
-                  <Navigation className="w-4 h-4" />
-                  <span>Buka Rute Navigasi Google Maps</span>
+                  <Navigation className="w-4 h-4" aria-hidden="true" />
+                  <span>Buka Rute di Google Maps</span>
                 </Button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => copyCoordinates(selectedFeature.coordinates!)}
+                  >
+                    {copiedCoord ? (
+                      <Check className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+                    ) : (
+                      <Copy className="w-4 h-4" aria-hidden="true" />
+                    )}
+                    <span>{copiedCoord ? 'Tersalin' : 'Salin Koordinat'}</span>
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator
+                          .share({
+                            title: selectedFeature.title,
+                            text: `${selectedFeature.title} - ${selectedFeature.dusun}`,
+                            url: window.location.href,
+                          })
+                          .catch(() => undefined);
+                      } else {
+                        copyCoordinates(selectedFeature.coordinates!);
+                      }
+                    }}
+                  >
+                    <Share2 className="w-4 h-4" aria-hidden="true" />
+                    <span>Bagikan</span>
+                  </Button>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* 6. Legend toggle: bottom-left, hidden on phones while a sheet is open */}
+      <div
+        className={`absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-20 pointer-events-auto ${
+          selectedFeature || layerPanelOpen ? 'hidden sm:block' : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setLegendOpen((open) => !open)}
+          aria-expanded={legendOpen}
+          className="min-h-[44px] sm:min-h-[36px] px-3.5 rounded-full bg-white border border-slate-300 text-sm font-semibold text-slate-800 hover:bg-slate-50 shadow-md flex items-center gap-2 transition-colors"
+        >
+          <Info className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+          <span>Legenda</span>
+        </button>
+
+        {legendOpen && (
+          <div className="absolute bottom-full mb-2 left-0 bg-white rounded-2xl border border-slate-200 shadow-xl p-3 w-60">
+            <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100">
+              <h2 className="text-xs font-semibold text-slate-600">Tingkat kerawanan</h2>
+              <button
+                type="button"
+                onClick={() => setLegendOpen(false)}
+                className="w-9 h-9 -mr-2 flex items-center justify-center text-slate-500 hover:text-slate-800 rounded-full hover:bg-slate-100"
+                aria-label="Tutup legenda"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+            <ul className="space-y-1.5 text-sm text-slate-700">
+              {[
+                ['bg-emerald-500', 'Rendah (Aman)'],
+                ['bg-amber-500', 'Sedang (Waspada)'],
+                ['bg-orange-500', 'Tinggi (Siaga)'],
+                ['bg-rose-600', 'Sangat Tinggi (Darurat)'],
+              ].map(([color, label]) => (
+                <li key={label} className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${color}`} aria-hidden="true" />
+                  <span>{label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Metadata & Uji Akurasi BIG Modal */}
+      <AccuracyMetadataModal
+        isOpen={accuracyModalOpen}
+        onClose={() => setAccuracyModalOpen(false)}
+      />
     </div>
   );
 };

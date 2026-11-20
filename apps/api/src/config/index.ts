@@ -20,6 +20,9 @@ const ConfigSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   TURNSTILE_ENABLED: z.coerce.boolean().default(false),
+  CLOUDFLARE_TURNSTILE_SITE_KEY: z.string().default('1x00000000000000000000AA'),
+  CLOUDFLARE_TURNSTILE_SECRET_KEY: z.string().default('1x0000000000000000000000000000000AA'),
+  BOT_PROTECTION_ENABLED: z.coerce.boolean().default(true),
   APP_VERSION: z.string().default('1.0.0'),
 }).refine(
   (data) => {
@@ -28,11 +31,15 @@ const ConfigSchema = z.object({
       if (origins.includes('*') || origins.length === 0 || origins[0] === '') {
         return false;
       }
+      // Production credentials must never use default dev fallback values
+      if (data.JWT_SECRET.includes('dev_key') || data.COOKIE_SECRET.includes('dev_key')) {
+        return false;
+      }
     }
     return true;
   },
   {
-    message: 'CORS_ORIGIN cannot be wildcard "*" or empty in production mode',
+    message: 'CORS_ORIGIN cannot be wildcard "*" and default dev secrets cannot be used in production mode',
     path: ['CORS_ORIGIN'],
   }
 );

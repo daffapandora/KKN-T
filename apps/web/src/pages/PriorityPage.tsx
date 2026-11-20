@@ -2,130 +2,43 @@ import React from 'react';
 import { Card, Button } from '@kemitir/ui';
 import { AlertTriangle, Award, CheckCircle2, ChevronRight, Droplets, MapPin, ShieldAlert, Truck, Users, Calendar, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface PriorityArea {
-  rank: number;
-  areaName: string;
-  dusun: string;
-  rtRw: string;
-  urgencyLevel: 'Sangat Mendesak' | 'Prioritas Tinggi' | 'Prioritas Sedang';
-  compositeScore: number; // 0 - 100
-  affectedResidents: number;
-  farmAreaHa: number;
-  primaryIssue: string;
-  nearestWaterSource: string;
-  distanceToWaterMeters: number;
-  recommendedIntervention: string[];
-}
+import { PriorityArea, PRIORITY_AREAS_DATA } from '../data/priorities';
 
 export const PriorityPage: React.FC = () => {
-  const priorityList: PriorityArea[] = [
-    {
-      rank: 1,
-      areaName: 'RT 02 Kemitir Kidul (Perbukitan Atas)',
-      dusun: 'Dusun Kemitir Kidul',
-      rtRw: 'RT 02 / RW 01',
-      urgencyLevel: 'Sangat Mendesak',
-      compositeScore: 92.4,
-      affectedResidents: 380,
-      farmAreaHa: 28.5,
-      primaryIssue: 'Mata air lokal (Tuk Gedang) mengalami penurunan debit >75% dan jalur pipa transmisi swadaya retak akibat pergerakan tanah lereng.',
-      nearestWaterSource: 'Sumur Bor Sentral RW 02',
-      distanceToWaterMeters: 850,
-      recommendedIntervention: [
-        'Dropping air bersih tangki darurat 2x seminggu ke balai warga',
-        'Penggantian 350m pipa paralon dengan pipa HDPE fleksibel tahan geser',
-        'Pemasangan tandon penampungan darurat 5.000L di titik balai RT',
-      ],
-    },
-    {
-      rank: 2,
-      areaName: 'Blok Sawah Tadah Hujan Garon',
-      dusun: 'Dusun Garon',
-      rtRw: 'RT 01 / RW 03',
-      urgencyLevel: 'Prioritas Tinggi',
-      compositeScore: 84.1,
-      affectedResidents: 240,
-      farmAreaHa: 42.0,
-      primaryIssue: 'Kekeringan lahan pertanian sayur kubis & cabai. Debit embung pertanian menyusut drastis ke level sedimentasi dasar.',
-      nearestWaterSource: 'Embung Pertanian Garon',
-      distanceToWaterMeters: 450,
-      recommendedIntervention: [
-        'Pengerukan sedimentasi dasar embung pertanian bersama kelompok tani',
-        'Bantuan pompa alkon bergerak untuk mengambil air sungai dasar lembah',
-        'Penetapan jadwal giliran jam pompa irigasi antar-blok sawah',
-      ],
-    },
-    {
-      rank: 3,
-      areaName: 'Lereng Kalitengah Bagian Timur',
-      dusun: 'Dusun Kalitengah',
-      rtRw: 'RT 03 / RW 04',
-      urgencyLevel: 'Prioritas Tinggi',
-      compositeScore: 78.6,
-      affectedResidents: 195,
-      farmAreaHa: 18.0,
-      primaryIssue: 'Topografi lereng terjal, warga lansia harus menuruni tebing curam sejauh 600m untuk mengambil air bersih ke mata air.',
-      nearestWaterSource: 'Mata Air Kalitengah Swadaya',
-      distanceToWaterMeters: 620,
-      recommendedIntervention: [
-        'Pembangunan bak penampung antara (booster tank) di elevasi tengah bukit',
-        'Perbaikan jalan setapak rabat beton menuju mata air untuk keselamatan warga',
-      ],
-    },
-    {
-      rank: 4,
-      areaName: 'Pemukiman Kemitir Lor Bawah',
-      dusun: 'Dusun Kemitir Lor',
-      rtRw: 'RT 03 / RW 01',
-      urgencyLevel: 'Prioritas Sedang',
-      compositeScore: 61.2,
-      affectedResidents: 310,
-      farmAreaHa: 15.0,
-      primaryIssue: 'Tekanan air pipa berkurang di jam sibuk sore hari, namun debit mata air Tuk Mulyo masih stabil mengalir.',
-      nearestWaterSource: 'Tuk Mulyo (Mata Air Utama)',
-      distanceToWaterMeters: 320,
-      recommendedIntervention: [
-        'Pembersihan saringan filter bak penampung utama',
-        'Pemasangan stop kran pengatur tekanan pada percabangan pipa warga',
-      ],
-    },
-  ];
+  const priorityList: PriorityArea[] = PRIORITY_AREAS_DATA;
 
   return (
-    <div className="flex-1 bg-slate-50/60 py-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="flex-1 bg-slate-50 py-5 sm:py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-8">
         
-        {/* 1. Apple Header */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_10px_25px_-5px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        {/* 1. Header Matriks Prioritas */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-5 sm:gap-6">
           <div className="space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-bold tracking-wide uppercase">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-semibold">
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>Matriks Prioritas & Pengambilan Keputusan • APBDes & BPBD</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 tracking-tight text-balance">
               Prioritas Penanganan Kekeringan Desa
             </h1>
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
+            <p className="text-sm sm:text-lg text-slate-600 leading-relaxed">
               Pemeringkatan objektif berbasis analisis spasial geodesi multi-kriteria. Menentukan alokasi prioritas bantuan tangki air BPBD, perbaikan pipa swadaya, dan dana tanggap darurat desa agar tepat sasaran.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <Link to="/peta?mode=priority">
-              <Button variant="primary" size="lg" className="gap-2 shadow-sm">
-                <MapPin className="w-5 h-5 text-rose-400" />
+          <div className="flex flex-col sm:flex-row gap-3 md:shrink-0">
+            <Button as={Link} to="/peta?mode=priority" variant="primary" size="lg" className="w-full md:w-auto">
+                <MapPin className="w-5 h-5" aria-hidden="true" />
                 <span>Buka Peta Zona Prioritas</span>
               </Button>
-            </Link>
           </div>
         </div>
 
-        {/* 2. Apple Formula Methodology Banner */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200/90 shadow-xs">
+        {/* 2. Metodologi Pembobotan Ilmiah Spasial */}
+        <div className="bg-amber-50 rounded-2xl p-4 sm:p-6 border border-amber-200">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
                 <Award className="w-6 h-6" />
               </div>
               <div>
@@ -136,26 +49,24 @@ export const PriorityPage: React.FC = () => {
                   Skor dihitung tanpa perkiraan subjektif menggunakan 3 bobot kriteria utama:
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <span className="px-3 py-1 rounded-xl bg-white/80 border border-amber-300 text-amber-950 text-xs sm:text-sm font-semibold">
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs sm:text-sm font-medium">
                     Bahaya Kekeringan Geodesi: <strong className="text-amber-800">40%</strong>
                   </span>
-                  <span className="px-3 py-1 rounded-xl bg-white/80 border border-amber-300 text-amber-950 text-xs sm:text-sm font-semibold">
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs sm:text-sm font-medium">
                     Kepadatan Warga & Lahan: <strong className="text-amber-800">35%</strong>
                   </span>
-                  <span className="px-3 py-1 rounded-xl bg-white/80 border border-amber-300 text-amber-950 text-xs sm:text-sm font-semibold">
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs sm:text-sm font-medium">
                     Jarak Akses ke Air: <strong className="text-amber-800">25%</strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="shrink-0">
-              <Link to="/edukasi">
-                <Button variant="secondary" size="md" className="gap-2 text-amber-950 border-amber-300 bg-white hover:bg-amber-50 font-semibold">
+            <div className="md:shrink-0">
+              <Button as={Link} to="/edukasi" variant="secondary" size="md" className="w-full md:w-auto text-amber-950 border-amber-300 hover:bg-amber-100">
                   <span>Lihat SOP Distribusi</span>
                   <ArrowRight className="w-4 h-4" />
                 </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -169,7 +80,8 @@ export const PriorityPage: React.FC = () => {
             return (
               <div
                 key={area.rank}
-                className={`bg-white rounded-2xl border p-6 sm:p-8 transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_8px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] ${
+                id={`rank-${area.rank}`}
+                className={`bg-white rounded-2xl border p-4 sm:p-6 lg:p-8 ${
                   isRank1
                     ? 'border-rose-300 ring-1 ring-rose-200'
                     : isRank2
@@ -178,10 +90,10 @@ export const PriorityPage: React.FC = () => {
                 }`}
               >
                 {/* Header Row: Rank Badge, Title, Urgency Score */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                  <div className="flex items-start sm:items-center gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-slate-100">
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
                     <div
-                      className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-extrabold text-lg shrink-0 shadow-xs ${
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center font-bold text-base sm:text-lg shrink-0 ${
                         isRank1
                           ? 'bg-rose-600 text-white'
                           : isRank2
@@ -216,10 +128,10 @@ export const PriorityPage: React.FC = () => {
                   </div>
 
                   {/* Urgency Score Progress Bar */}
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 min-w-[240px]">
+                  <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-100 w-full lg:w-auto lg:min-w-[240px]">
                     <div className="flex items-center justify-between text-xs font-bold mb-1.5">
                       <span className="text-slate-600">SKOR URGENSI:</span>
-                      <span className="text-base font-extrabold text-slate-900">
+                      <span className="text-base font-bold text-slate-900">
                         {area.compositeScore} <span className="text-xs font-normal text-slate-400">/ 100</span>
                       </span>
                     </div>
@@ -239,7 +151,7 @@ export const PriorityPage: React.FC = () => {
                 </div>
 
                 {/* Body Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 pt-4 sm:pt-6">
                   {/* Left Column: Problem & Metrics */}
                   <div className="lg:col-span-6 space-y-4">
                     <div>
@@ -290,21 +202,17 @@ export const PriorityPage: React.FC = () => {
                       ))}
                     </div>
 
-                    <div className="pt-2 flex flex-wrap items-center gap-3">
-                      <Link to={`/peta?mode=priority`}>
-                        <Button variant="secondary" size="md" className="gap-2 font-semibold">
-                          <MapPin className="w-4 h-4 text-slate-600" />
+                    <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                      <Button as={Link} to={`/peta?mode=priority&search=${encodeURIComponent(area.areaName)}`} variant="secondary" size="md" className="w-full sm:w-auto">
+                          <MapPin className="w-4 h-4 text-slate-600" aria-hidden="true" />
                           <span>Buka Lokasi di Peta</span>
                         </Button>
-                      </Link>
 
                       {isRank1 && (
-                        <Link to="/laporan">
-                          <Button variant="danger" size="md" className="gap-2 font-semibold">
+                        <Button as={Link} to="/laporan?category=Kebutuhan%20Bantuan%20Tangki%20Air" variant="danger" size="md" className="w-full sm:w-auto">
                             <Truck className="w-4 h-4" />
                             <span>Permintaan Tangki Air</span>
                           </Button>
-                        </Link>
                       )}
                     </div>
                   </div>

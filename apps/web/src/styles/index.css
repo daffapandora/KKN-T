@@ -9,10 +9,72 @@
     border-color: #E8EAED;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Never let a stray child create sideways scroll on phones */
   body {
+    overflow-x: clip;
     background-color: #FFFFFF;
     color: #151A22;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Interaction affordances: pointers and disabled states (R-39) */
+  a[href],
+  button,
+  summary,
+  select,
+  label[for],
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  [role='button'],
+  [role='tab'],
+  [role='switch'] {
+    cursor: pointer;
+  }
+
+  /* Removes the 300ms tap delay and double-tap zoom on controls */
+  a[href],
+  button,
+  summary,
+  select,
+  label[for],
+  [role='button'],
+  [role='switch'] {
+    touch-action: manipulation;
+  }
+
+  [disabled],
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Keyboard focus indicators (R-32) */
+  :focus-visible {
+    outline: 2px solid #16a34a;
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion preference (R-39) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -1,0 +1,480 @@
+{
+  "type": "FeatureCollection",
+  "name": "Kemitir_Ground_Control_Points",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.288663,
+          -7.224201,
+          1005.15
+        ]
+      },
+      "properties": {
+        "id": "ICP 2",
+        "type": "ICP",
+        "label": "ICP: ICP 2",
+        "easting_utm": 421468.209,
+        "northing_utm": 9201405.065,
+        "elevation_m": 1005.1454,
+        "delta_x_m": 0.019,
+        "delta_y_m": 0.038,
+        "delta_z_m": -0.053,
+        "delta_2d_m": 0.0425,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.290513,
+          -7.223351,
+          973.39
+        ]
+      },
+      "properties": {
+        "id": "ICP 4",
+        "type": "ICP",
+        "label": "ICP: ICP 4",
+        "easting_utm": 421672.316,
+        "northing_utm": 9201499.412,
+        "elevation_m": 973.3929,
+        "delta_x_m": 0.115,
+        "delta_y_m": -0.046,
+        "delta_z_m": 0.116,
+        "delta_2d_m": 0.1239,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.288689,
+          -7.227621,
+          1063.13
+        ]
+      },
+      "properties": {
+        "id": "ICP 7",
+        "type": "ICP",
+        "label": "ICP: ICP 7",
+        "easting_utm": 421471.662,
+        "northing_utm": 9201026.989,
+        "elevation_m": 1063.1294,
+        "delta_x_m": -0.018,
+        "delta_y_m": 0.072,
+        "delta_z_m": 0.512,
+        "delta_2d_m": 0.0742,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.271597,
+          -7.214011,
+          856.81
+        ]
+      },
+      "properties": {
+        "id": "ICP 12",
+        "type": "ICP",
+        "label": "ICP: ICP 12",
+        "easting_utm": 419582.218,
+        "northing_utm": 9202528.689,
+        "elevation_m": 856.8097,
+        "delta_x_m": -0.097,
+        "delta_y_m": -0.018,
+        "delta_z_m": -0.38,
+        "delta_2d_m": 0.0987,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.271449,
+          -7.229038,
+          1169.01
+        ]
+      },
+      "properties": {
+        "id": "ICP 8",
+        "type": "ICP",
+        "label": "ICP: ICP 8",
+        "easting_utm": 419568.603,
+        "northing_utm": 9200867.284,
+        "elevation_m": 1169.011,
+        "delta_x_m": 0.116,
+        "delta_y_m": 0.029,
+        "delta_z_m": 0.808,
+        "delta_2d_m": 0.1196,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.263981,
+          -7.228192,
+          1124.36
+        ]
+      },
+      "properties": {
+        "id": "ICP 1",
+        "type": "ICP",
+        "label": "ICP: ICP 1",
+        "easting_utm": 418743.929,
+        "northing_utm": 9200959.558,
+        "elevation_m": 1124.3613,
+        "delta_x_m": 0.021,
+        "delta_y_m": -0.053,
+        "delta_z_m": 0.383,
+        "delta_2d_m": 0.057,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.268853,
+          -7.22574,
+          1139.02
+        ]
+      },
+      "properties": {
+        "id": "ICP 10",
+        "type": "ICP",
+        "label": "ICP: ICP 10",
+        "easting_utm": 419281.379,
+        "northing_utm": 9201231.441,
+        "elevation_m": 1139.0228,
+        "delta_x_m": -0.14,
+        "delta_y_m": 0.086,
+        "delta_z_m": 0.244,
+        "delta_2d_m": 0.1643,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.27085,
+          -7.233501,
+          1110.67
+        ]
+      },
+      "properties": {
+        "id": "ICP 11",
+        "type": "ICP",
+        "label": "ICP: ICP 11",
+        "easting_utm": 419503.242,
+        "northing_utm": 9200373.775,
+        "elevation_m": 1110.6742,
+        "delta_x_m": 0.046,
+        "delta_y_m": -0.234,
+        "delta_z_m": -0.088,
+        "delta_2d_m": 0.2385,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.281521,
+          -7.22396,
+          1101.6
+        ]
+      },
+      "properties": {
+        "id": "ICP 3",
+        "type": "ICP",
+        "label": "ICP: ICP 3",
+        "easting_utm": 420679.638,
+        "northing_utm": 9201430.511,
+        "elevation_m": 1101.6015,
+        "delta_x_m": 0.016,
+        "delta_y_m": 0.017,
+        "delta_z_m": 1.575,
+        "delta_2d_m": 0.0233,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.280326,
+          -7.225093,
+          1127.89
+        ]
+      },
+      "properties": {
+        "id": "ICP 5",
+        "type": "ICP",
+        "label": "ICP: ICP 5",
+        "easting_utm": 420547.915,
+        "northing_utm": 9201305.006,
+        "elevation_m": 1127.8942,
+        "delta_x_m": -0.12,
+        "delta_y_m": 0.141,
+        "delta_z_m": 0.517,
+        "delta_2d_m": 0.1852,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.28163,
+          -7.2331,
+          1113.07
+        ]
+      },
+      "properties": {
+        "id": "ICP 9",
+        "type": "ICP",
+        "label": "ICP: ICP 9",
+        "easting_utm": 420693.335,
+        "northing_utm": 9200420.048,
+        "elevation_m": 1113.0655,
+        "delta_x_m": 0.063,
+        "delta_y_m": -0.057,
+        "delta_z_m": 1.285,
+        "delta_2d_m": 0.085,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.292958,
+          -7.231575,
+          1027.0
+        ]
+      },
+      "properties": {
+        "id": "ICP 6",
+        "type": "ICP",
+        "label": "ICP: ICP 6",
+        "easting_utm": 421943.693,
+        "northing_utm": 9200590.585,
+        "elevation_m": 1026.9996,
+        "delta_x_m": 0.061,
+        "delta_y_m": -0.025,
+        "delta_z_m": 0.011,
+        "delta_2d_m": 0.0659,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.291261,
+          -7.229488,
+          1042.76
+        ]
+      },
+      "properties": {
+        "id": "GCP 8",
+        "type": "GCP",
+        "label": "GCP: GCP 8",
+        "easting_utm": 421755.919,
+        "northing_utm": 9200821.049,
+        "elevation_m": 1042.7642,
+        "delta_x_m": -0.002,
+        "delta_y_m": 0.011,
+        "delta_z_m": 0.001,
+        "delta_2d_m": 0.0112,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.272393,
+          -7.215643,
+          949.84
+        ]
+      },
+      "properties": {
+        "id": "GCP 12",
+        "type": "GCP",
+        "label": "GCP: GCP 12",
+        "easting_utm": 419670.463,
+        "northing_utm": 9202348.323,
+        "elevation_m": 949.8364,
+        "delta_x_m": 0.002,
+        "delta_y_m": 0.002,
+        "delta_z_m": 0.003,
+        "delta_2d_m": 0.0028,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.278051,
+          -7.227575,
+          1165.6
+        ]
+      },
+      "properties": {
+        "id": "GCP 9",
+        "type": "GCP",
+        "label": "GCP: GCP 9",
+        "easting_utm": 420297.23,
+        "northing_utm": 9201030.254,
+        "elevation_m": 1165.6041,
+        "delta_x_m": -0.002,
+        "delta_y_m": -0.012,
+        "delta_z_m": 0.003,
+        "delta_2d_m": 0.0122,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.270089,
+          -7.234891,
+          1116.42
+        ]
+      },
+      "properties": {
+        "id": "GCP 11",
+        "type": "GCP",
+        "label": "GCP: GCP 11",
+        "easting_utm": 419419.445,
+        "northing_utm": 9200219.984,
+        "elevation_m": 1116.4199,
+        "delta_x_m": -0.001,
+        "delta_y_m": 0.001,
+        "delta_z_m": 0.002,
+        "delta_2d_m": 0.0014,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.28512,
+          -7.218081,
+          920.91
+        ]
+      },
+      "properties": {
+        "id": "GCP 3",
+        "type": "GCP",
+        "label": "GCP: GCP 3",
+        "easting_utm": 421075.978,
+        "northing_utm": 9202081.041,
+        "elevation_m": 920.9104,
+        "delta_x_m": 0.002,
+        "delta_y_m": 0.003,
+        "delta_z_m": 0.001,
+        "delta_2d_m": 0.0036,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.295467,
+          -7.232696,
+          1037.53
+        ]
+      },
+      "properties": {
+        "id": "GCP 7",
+        "type": "GCP",
+        "label": "GCP: GCP 7",
+        "easting_utm": 422220.916,
+        "northing_utm": 9200467.07,
+        "elevation_m": 1037.5292,
+        "delta_x_m": -0.001,
+        "delta_y_m": 0.002,
+        "delta_z_m": 0.001,
+        "delta_2d_m": 0.0022,
+        "zone": "UTM 49S (DGN95 / EPSG:23879)",
+        "quality_standard": "Perka BIG No. 15/2014",
+        "status": "Terverifikasi (CE90=0.186m, LE90=1.136m)"
+      }
+    }
+  ]
+}

@@ -1,24 +1,25 @@
 import React from 'react';
-import { Card } from '@kemitir/ui';
+import { Card, Button } from '@kemitir/ui';
 import { ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const PrivacyPolicyPage: React.FC = () => {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="flex items-center gap-2 mb-2 text-[#16A34A]">
-        <ShieldCheck className="w-5 h-5" />
-        <span className="text-xs font-bold uppercase tracking-wider">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+      <div className="flex items-start gap-2 mb-2 text-[#16A34A]">
+        <ShieldCheck className="w-5 h-5 shrink-0" aria-hidden="true" />
+        <span className="text-xs font-semibold">
           Kepatuhan Regulasi UU PDP No. 27 Tahun 2022
         </span>
       </div>
-      <h1 className="text-3xl font-bold text-[#151A22]">
+      <h1 className="text-2xl sm:text-3xl font-bold text-[#151A22] text-balance">
         Kebijakan Privasi & Perlindungan Data Pribadi
       </h1>
       <p className="mt-2 text-sm text-[#6F747C]">
         Sistem Informasi Spasial & Mitigasi Kekeringan Desa Kemitir (Kemitir Tangguh Bencana)
       </p>
 
-      <Card className="mt-8 p-6 md:p-8 space-y-6 text-sm text-[#151A22] leading-relaxed">
+      <Card className="mt-6 sm:mt-8 p-4 sm:p-6 md:p-8 space-y-6 text-sm text-[#151A22] leading-relaxed">
         <section>
           <h2 className="text-base font-bold text-[#151A22] mb-2">1. Prinsip Umum</h2>
           <p className="text-[#6F747C]">
@@ -65,6 +66,15 @@ export const PrivacyPolicyPage: React.FC = () => {
           </p>
         </section>
       </Card>
+
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <Button as={Link} to="/" variant="secondary" size="md" className="w-full sm:w-auto">
+          Kembali ke Beranda
+        </Button>
+        <Button as={Link} to="/peta" variant="brand" size="md" className="w-full sm:w-auto">
+          Buka Peta WebGIS
+        </Button>
+      </div>
     </div>
   );
 };

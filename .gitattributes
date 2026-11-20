@@ -1,0 +1,9 @@
+*.pdf  filter=lfs diff=lfs merge=lfs -text
+*.xls  filter=lfs diff=lfs merge=lfs -text
+*.xlsx filter=lfs diff=lfs merge=lfs -text
+*.zip  filter=lfs diff=lfs merge=lfs -text
+*.shp  filter=lfs diff=lfs merge=lfs -text
+*.dbf  filter=lfs diff=lfs merge=lfs -text
+webgis/assets/**/*.tif filter=lfs diff=lfs merge=lfs -text
+*.geojson text eol=lf
+*.csv text eol=lf

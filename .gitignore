@@ -41,3 +41,12 @@ scratch/
 tmp/
 coverage/
 .turbo/
+split-repos/
+
+# Large Photogrammetry Raster datasets (stored on Google Drive)
+*.tif
+*.tiff
+*.geotif
+*.geotiff
+data/raw/
+processed/

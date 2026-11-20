@@ -450,4 +450,126 @@ describe('API Integration & Remediation Test Suite (T1, T2, T3)', () => {
       expect(JSON.parse(validatorRes.body).data.id).toBe(pendingReportAId);
     });
   });
+
+  // ==========================================
+  // T4: BEKEMITIR ADAPTED ENDPOINTS
+  // ==========================================
+  describe('T4: Bekemitir Architecture & Spatial Extensions', () => {
+    it('GET /api/v1/openapi.json and GET /api/v1/docs serve valid specification and documentation UI', async () => {
+      // 1. OpenAPI JSON
+      const jsonRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/openapi.json',
+      });
+      expect(jsonRes.statusCode).toBe(200);
+      expect(jsonRes.headers['content-type']).toContain('application/json');
+      const spec = JSON.parse(jsonRes.body);
+      expect(spec.openapi).toBe('3.1.0');
+      expect(spec.info.title).toContain('Kemitir');
+
+      // 2. Scalar Docs HTML
+      const docsRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/docs',
+      });
+      expect(docsRes.statusCode).toBe(200);
+      expect(docsRes.headers['content-type']).toContain('text/html');
+      expect(docsRes.body).toContain('@scalar/api-reference');
+    });
+
+    it('GET /api/v1/tiles/:layerSlug/:z/:x/:y.mvt handles vector tile requests and ETag caching', async () => {
+      // 1. Valid tile coordinates
+      const tileRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tiles/batas-desa/14/13210/8340.mvt',
+      });
+      expect(tileRes.statusCode).toBe(200);
+      expect(tileRes.headers['content-type']).toBe('application/vnd.mapbox-vector-tile');
+      expect(tileRes.headers['cache-control']).toBe('public, max-age=3600');
+      const etag = tileRes.headers['etag'];
+      expect(etag).toBeDefined();
+
+      // 2. 304 Not Modified when ETag matches
+      const cachedRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tiles/batas-desa/14/13210/8340.mvt',
+        headers: {
+          'if-none-match': etag as string,
+        },
+      });
+      expect(cachedRes.statusCode).toBe(304);
+
+      // 3. 404 for unknown layer
+      const unknownRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tiles/layer-fiktif/14/13210/8340.mvt',
+      });
+      expect(unknownRes.statusCode).toBe(404);
+
+      // 4. 400 for non-.mvt format
+      const invalidFormatRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tiles/batas-desa/14/13210/8340.png',
+      });
+      expect(invalidFormatRes.statusCode).toBe(400);
+    });
+
+    it('POST /api/v1/reports/sync performs resilient offline batch sync with poison-pill isolation', async () => {
+      const syncRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/reports/sync',
+        headers: {
+          authorization: `Bearer ${citizenToken}`,
+        },
+        payload: {
+          items: [
+            // Valid item
+            {
+              category: 'Kekeringan Lahan Pertanian',
+              description: 'Lahan jagung Dusun Garon kekurangan air irigasi 1 minggu berturut-turut.',
+              geometry: {
+                type: 'Point',
+                coordinates: [110.312, -7.225],
+              },
+              accuracyMeters: 5.0,
+            },
+            // Poison-pill item (invalid category & description too short)
+            {
+              category: 'Kategori Palsu',
+              description: 'pendek',
+              geometry: {
+                type: 'Point',
+                coordinates: [110.312, -7.225],
+              },
+              accuracyMeters: 5.0,
+            },
+          ],
+        },
+      });
+
+      expect(syncRes.statusCode).toBe(200);
+      const body = JSON.parse(syncRes.body);
+      expect(body.success).toBe(true);
+      expect(body.data.totalReceived).toBe(2);
+      expect(body.data.syncedCount).toBe(1);
+      expect(body.data.rejectedCount).toBe(1);
+      expect(body.data.rejected[0].index).toBe(1);
+      expect(body.data.rejected[0].code).toBe('VALIDATION_FAILED');
+    });
+
+    it('GET /api/v1/summaries/drought returns drought summary by severity class', async () => {
+      const summaryRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/summaries/drought',
+      });
+      expect(summaryRes.statusCode).toBe(200);
+      const body = JSON.parse(summaryRes.body);
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveProperty('bySeverity');
+      expect(body.data.bySeverity).toHaveProperty('normal');
+      expect(body.data.bySeverity).toHaveProperty('waspada');
+      expect(body.data.bySeverity).toHaveProperty('siaga');
+      expect(body.data.bySeverity).toHaveProperty('awas');
+    });
+  });
 });

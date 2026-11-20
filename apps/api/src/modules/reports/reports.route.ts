@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { db } from '../../plugins/db';
 import { CreateReportSchema } from '@kemitir/shared';
 import crypto from 'crypto';
+import { verifyTurnstileToken } from '../security/turnstile.service';
 
 interface ReportDbRecord {
   id: string;
@@ -225,10 +226,18 @@ export async function reportsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // 4. Create drought report
+  // 4. Create drought report (Protected against spam & automated bots)
   fastify.post(
     '/api/v1/reports',
-    { preHandler: [fastify.optionalAuthenticate] },
+    {
+      preHandler: [fastify.optionalAuthenticate],
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '10 minutes',
+        },
+      },
+    },
     async (request, reply) => {
       const parsed = CreateReportSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -240,6 +249,18 @@ export async function reportsRoutes(fastify: FastifyInstance) {
               field: e.path.join('.'),
               issue: e.message,
             })),
+            requestId: request.id,
+          },
+        });
+      }
+
+      // Cloudflare Turnstile Human Verification
+      const turnstile = await verifyTurnstileToken(parsed.data.turnstileToken, request.ip);
+      if (!turnstile.success) {
+        return reply.status(403).send({
+          error: {
+            code: 'BOT_VERIFICATION_FAILED',
+            message: turnstile.error || 'Verifikasi bot Cloudflare gagal. Silakan coba kembali.',
             requestId: request.id,
           },
         });
@@ -298,6 +319,166 @@ export async function reportsRoutes(fastify: FastifyInstance) {
             description: newRecord.description,
             validation_status: newRecord.validation_status,
             created_at: newRecord.created_at,
+          },
+        });
+      }
+    }
+  );
+
+  // 5. Offline Batch Sync with Poison-Pill Isolation (bekemitir adaptation)
+  fastify.post(
+    '/api/v1/reports/sync',
+    { preHandler: [fastify.optionalAuthenticate] },
+    async (request, reply) => {
+      const body = request.body as any;
+      if (!body || !Array.isArray(body.items)) {
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_SYNC_ENVELOPE',
+            message: 'Body permintaan wajib berupa array { items: [...] } dengan panjang 1-100.',
+          },
+        });
+      }
+
+      if (body.items.length === 0 || body.items.length > 100) {
+        return reply.status(400).send({
+          error: {
+            code: 'SYNC_BATCH_SIZE_EXCEEDED',
+            message: 'Jumlah item sinkronisasi offline harus antara 1 hingga 100 item.',
+          },
+        });
+      }
+
+      const userId = request.user?.id || null;
+      const syncedReports: any[] = [];
+      const rejectedItems: Array<{ index: number; code: string; message: string }> = [];
+
+      for (let i = 0; i < body.items.length; i++) {
+        const item = body.items[i];
+        const parsed = CreateReportSchema.safeParse(item);
+        if (!parsed.success) {
+          rejectedItems.push({
+            index: i,
+            code: 'VALIDATION_FAILED',
+            message: parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          });
+          continue;
+        }
+
+        const { category, description, geometry, accuracyMeters, photoIds } = parsed.data;
+        const [lng, lat] = geometry.coordinates;
+        const reportId = crypto.randomUUID();
+
+        try {
+          const res = await db.query(
+            `INSERT INTO reports (
+              id, user_id, category, description, geom, accuracy_m, photo_ids, validation_status
+            ) VALUES (
+              $1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, $8, 'pending'
+            ) RETURNING id, user_id, category, description, validation_status, created_at`,
+            [reportId, userId, category, description, lng, lat, accuracyMeters, photoIds]
+          );
+          syncedReports.push(res.rows[0]);
+        } catch {
+          const newRecord: ReportDbRecord = {
+            id: reportId,
+            user_id: userId,
+            category,
+            description,
+            geom: geometry,
+            accuracy_m: accuracyMeters,
+            photo_ids: photoIds || [],
+            validation_status: 'pending',
+            created_at: new Date().toISOString(),
+          };
+          inMemoryReports.unshift(newRecord);
+          syncedReports.push({
+            id: newRecord.id,
+            category: newRecord.category,
+            description: newRecord.description,
+            validation_status: newRecord.validation_status,
+            created_at: newRecord.created_at,
+          });
+        }
+      }
+
+      return reply.status(200).send({
+        success: true,
+        data: {
+          totalReceived: body.items.length,
+          syncedCount: syncedReports.length,
+          rejectedCount: rejectedItems.length,
+          synced: syncedReports,
+          rejected: rejectedItems,
+        },
+      });
+    }
+  );
+
+  // 6. Validate Report (Validator / Admin only)
+  fastify.patch<{
+    Params: { id: string };
+    Body: { status: 'valid' | 'rejected'; notes?: string };
+  }>(
+    '/api/v1/reports/:id/validate',
+    { preHandler: [fastify.requireRole('validator', 'admin')] },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { status, notes } = request.body || {};
+
+      if (!status || !['valid', 'rejected'].includes(status)) {
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_STATUS',
+            message: "Status validasi wajib bernilai 'valid' atau 'rejected'",
+          },
+        });
+      }
+
+      const validatorId = request.user?.id;
+
+      try {
+        const res = await db.query(
+          `UPDATE reports
+           SET validation_status = $1, verified_by = $2, verified_at = NOW(), validation_notes = $3
+           WHERE id = $4 AND deleted_at IS NULL
+           RETURNING id, category, description, validation_status, verified_at`,
+          [status, validatorId, notes || null, id]
+        );
+
+        if (res.rowCount === 0) {
+          return reply.status(404).send({
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Laporan tidak ditemukan',
+            },
+          });
+        }
+
+        return reply.send({
+          message: `Laporan berhasil diubah statusnya menjadi ${status}`,
+          data: res.rows[0],
+        });
+      } catch {
+        // In-memory fallback
+        const report = inMemoryReports.find((r) => r.id === id);
+        if (!report) {
+          return reply.status(404).send({
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Laporan tidak ditemukan',
+            },
+          });
+        }
+
+        report.validation_status = status;
+        return reply.send({
+          message: `Laporan berhasil diubah statusnya menjadi ${status}`,
+          data: {
+            id: report.id,
+            category: report.category,
+            description: report.description,
+            validation_status: report.validation_status,
           },
         });
       }

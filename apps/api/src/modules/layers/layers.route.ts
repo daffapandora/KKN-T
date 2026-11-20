@@ -73,16 +73,18 @@ export async function layersRoutes(fastify: FastifyInstance) {
           ) AS geojson
           FROM ${tableName} t
         `;
+        const params: any[] = [];
 
         if (bbox) {
           const parts = bbox.split(',').map(Number);
           if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
             const [minLng, minLat, maxLng, maxLat] = parts;
-            query += ` WHERE ST_Intersects(t.geom, ST_MakeEnvelope(${minLng}, ${minLat}, ${maxLng}, ${maxLat}, 4326))`;
+            query += ` WHERE ST_Intersects(t.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326))`;
+            params.push(minLng, minLat, maxLng, maxLat);
           }
         }
 
-        const res = await db.query(query);
+        const res = await db.query(query, params);
         return reply.send(res.rows[0]?.geojson || { type: 'FeatureCollection', features: [] });
       } catch (err: any) {
         // Fallback dummy GeoJSON for dev if table not populated

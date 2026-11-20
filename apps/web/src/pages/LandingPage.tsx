@@ -3,7 +3,6 @@ import { LandingHero } from '../components/landing/LandingHero';
 import { AccessModeCards } from '../components/landing/AccessModeCards';
 import { CoverageStatement } from '../components/landing/CoverageStatement';
 import { ProofMetrics } from '../components/landing/ProofMetrics';
-import { CapabilitySections } from '../components/landing/CapabilitySections';
 import { TeaserOffline } from '../components/landing/TeaserOffline';
 import { IntegrationsGrid } from '../components/landing/IntegrationsGrid';
 import { TestimonialCard } from '../components/landing/TestimonialCard';
@@ -16,7 +15,6 @@ export const LandingPage: React.FC = () => {
       <AccessModeCards />
       <CoverageStatement />
       <ProofMetrics />
-      <CapabilitySections />
       <TeaserOffline />
       <IntegrationsGrid />
       <TestimonialCard />

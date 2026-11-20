@@ -44,6 +44,7 @@ export const UserProfileSchema = z.object({
   ]),
   rt: z.string().nullable().optional(),
   rw: z.string().nullable().optional(),
+  dusun: z.string().nullable().optional(),
   status: z.string(),
   consentAt: z.string().datetime().nullable().optional(),
 });

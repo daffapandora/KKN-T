@@ -6,12 +6,15 @@ import sensible from '@fastify/sensible';
 import { config, getAllowedCorsOrigins } from './config';
 import { errorHandler } from './plugins/errorHandler';
 import { registerAuthPlugin } from './plugins/auth';
+import { registerBotProtectionPlugin } from './plugins/botProtection';
 import { healthRoutes } from './modules/health/health.route';
 import { authRoutes } from './modules/auth/auth.route';
 import { dashboardRoutes } from './modules/dashboard/dashboard.route';
 import { layersRoutes } from './modules/layers/layers.route';
 import { waterSourcesRoutes } from './modules/water-sources/water-sources.route';
 import { reportsRoutes } from './modules/reports/reports.route';
+import { tilesRoutes } from './modules/tiles/tiles.route';
+import { docsRoutes } from './modules/docs/docs.route';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -45,6 +48,9 @@ export function buildApp(): FastifyInstance {
   // Register Authentication & RBAC Plugin
   app.register(registerAuthPlugin);
 
+  // Register Anti-Bot & Threat Protection Plugin
+  app.register(registerBotProtectionPlugin);
+
   // Register Routes
   app.register(healthRoutes);
   app.register(authRoutes);
@@ -52,6 +58,8 @@ export function buildApp(): FastifyInstance {
   app.register(layersRoutes);
   app.register(waterSourcesRoutes);
   app.register(reportsRoutes);
+  app.register(tilesRoutes);
+  app.register(docsRoutes);
 
   return app;
 }

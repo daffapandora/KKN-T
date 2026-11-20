@@ -1,7 +1,8 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { AuthProvider } from './context/AuthContext';
 
 // Code-split routes for optimal performance budget (Section 8)
 const LandingPage = lazy(() => import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })));
@@ -12,7 +13,6 @@ const EducationPage = lazy(() => import('./pages/EducationPage').then((m) => ({ 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const ReportPage = lazy(() => import('./pages/ReportPage').then((m) => ({ default: m.ReportPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })));
-
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 
 const RouteLoadingFallback = () => (
@@ -24,30 +24,42 @@ const RouteLoadingFallback = () => (
   </div>
 );
 
+const AppLayout: React.FC = () => {
+  const location = useLocation();
+  // Map views require full viewport immersion; hide page footer on map views
+  const isMapRoute = location.pathname === '/peta' || location.pathname === '/partisipatif';
+
+  return (
+    <div className={`min-h-screen flex flex-col bg-white ${isMapRoute ? 'h-dvh overflow-hidden' : ''}`}>
+      <Navbar />
+      <main className="flex-1 flex flex-col min-h-0 relative">
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/peta" element={<MapPage />} />
+            <Route path="/sumber-air" element={<WaterSourcesPage />} />
+            <Route path="/prioritas" element={<PriorityPage />} />
+            <Route path="/edukasi" element={<EducationPage />} />
+            <Route path="/dasbor" element={<DashboardPage />} />
+            <Route path="/laporan" element={<ReportPage />} />
+            <Route path="/partisipatif" element={<MapPage />} />
+            <Route path="/masuk" element={<LoginPage />} />
+            <Route path="/privasi" element={<PrivacyPolicyPage />} />
+            <Route path="*" element={<LandingPage />} />
+          </Routes>
+        </Suspense>
+      </main>
+      {!isMapRoute && <Footer />}
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-white">
-        <Navbar />
-        <div className="flex-1 flex flex-col">
-          <Suspense fallback={<RouteLoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/peta" element={<MapPage />} />
-              <Route path="/sumber-air" element={<WaterSourcesPage />} />
-              <Route path="/prioritas" element={<PriorityPage />} />
-              <Route path="/edukasi" element={<EducationPage />} />
-              <Route path="/dasbor" element={<DashboardPage />} />
-              <Route path="/laporan" element={<ReportPage />} />
-              <Route path="/partisipatif" element={<MapPage />} />
-              <Route path="/masuk" element={<LoginPage />} />
-              <Route path="/privasi" element={<PrivacyPolicyPage />} />
-              <Route path="*" element={<LandingPage />} />
-            </Routes>
-          </Suspense>
-        </div>
-        <Footer />
-      </div>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AuthProvider>
+        <AppLayout />
+      </AuthProvider>
     </BrowserRouter>
   );
 };

@@ -181,6 +181,11 @@ export async function authenticateUser(input: LoginInput): Promise<AuthUserRecor
     user = inMemoryUsers.get(phoneHashed) || null;
   }
 
+  // Fallback to in-memory seed accounts if not found in database table
+  if (!user) {
+    user = inMemoryUsers.get(phoneHashed) || null;
+  }
+
   // Generic invalid credentials message (never reveal whether phone or password was wrong)
   const invalidCredentialsError = () => {
     const err: any = new Error('Nomor telepon atau kata sandi tidak valid');
@@ -319,11 +324,15 @@ export async function getUserById(userId: string): Promise<AuthUserRecord | null
        WHERE id = $1 AND deleted_at IS NULL`,
       [userId]
     );
-    return res.rows[0] || null;
-  } catch {
-    for (const u of inMemoryUsers.values()) {
-      if (u.id === userId) return u;
+    if (res.rows && res.rows[0]) {
+      return res.rows[0];
     }
-    return null;
+  } catch {
+    // In-memory fallback
   }
+
+  for (const u of inMemoryUsers.values()) {
+    if (u.id === userId) return u;
+  }
+  return null;
 }
